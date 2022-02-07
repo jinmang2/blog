@@ -332,11 +332,13 @@ $$H(X)=-\sum_{x\in X}P(x)\cdot\log{P(x)}$$
 <a class="anchor" href="#%EC%9D%B4%EC%82%B0%EB%B3%80%EC%88%98%EC%9D%98-Entropy" aria-hidden="true"><span class="octicon octicon-link"></span></a>이산변수의 Entropy<a class="anchor-link" href="#%EC%9D%B4%EC%82%B0%EB%B3%80%EC%88%98%EC%9D%98-Entropy"> </a>
 </h2>
 <p>Discrete variable의 기댓값은 summation으로 쓸 수 있습니다. 위의 수식을 잘 살펴보죠. 기댓값의 수식이죠?</p>
-$$\begin{align}\\
+$$
+\begin{aligned}\\
 H(X)&amp;=-\sum_{x\in X}P(x)\cdot\log{P(x)}\\
 &amp;=\sum_{x\in X}P(x)\cdot(-\log{P(x)})\\
 &amp;=\mathbb{E}\big[-\log{P(x)}\big]\\
-\end{align}$$<p>위 수식을 잘 기억해주세요. 이산변수는 기댓값을 합으로 계산하기 때문에 아래와 같이 쉽게 계산할 수 있습니다.</p>
+\end{aligned}
+$$<p>위 수식을 잘 기억해주세요. 이산변수는 기댓값을 합으로 계산하기 때문에 아래와 같이 쉽게 계산할 수 있습니다.</p>
 
 </div>
 </div>
@@ -395,10 +397,12 @@ H(X)&amp;=-\sum_{x\in X}P(x)\cdot\log{P(x)}\\
 <a class="anchor" href="#%EC%97%B0%EC%86%8D%EB%B3%80%EC%88%98%EC%9D%98-Entropy" aria-hidden="true"><span class="octicon octicon-link"></span></a>연속변수의 Entropy<a class="anchor-link" href="#%EC%97%B0%EC%86%8D%EB%B3%80%EC%88%98%EC%9D%98-Entropy"> </a>
 </h2>
 <p>이와는 다르게 Continuous variable의 기댓값은 Integral로 쓸 수 있습니다.</p>
-$$\begin{align}\\
+$$
+\begin{aligned}\\
 H(X)&amp;=\mathbb{E}\big[-\log{P(X)}\big]\\
 &amp;=\int_{-\infty}^{\infty}{P(X)\cdot(-\log{P(X)})}dx
-\end{align}$$<p>위를 trapezoidal rule을 사용하여 적분값을 계산해보겠습니다.</p>
+\end{aligned}
+$$<p>위를 trapezoidal rule을 사용하여 적분값을 계산해보겠습니다.</p>
 
 </div>
 </div>
@@ -486,12 +490,16 @@ H(X)&amp;=\mathbb{E}\big[-\log{P(X)}\big]\\
 $$P(X)=\cfrac{1}{\sqrt{2\pi\sigma^2}}\exp{\bigg(\cfrac{-(X-\mu)^2}{2\sigma^2}\bigg)}$$
 </p>
 <p>이제 엔트로피 수식을 전개해봅시다.</p>
-$$\begin{align}\\
+$$
+\begin{aligned}\\
 H(X)&amp;=\mathbb{E}\big[-\log{P(X)}\big]\\
 &amp;=\int_{-\infty}^{\infty}{P(X)\cdot(-\log{P(X)})}dX
-\end{align}$$<p>여기서 $-\log P(X)$는 $\cfrac{1}{2}\log{2\pi\sigma^2}+\cfrac{1}{2\sigma^2}(X-\mu)^2$이고 이를 대입하면</p>
-$$H(X)=\cfrac{1}{2}\log{2\pi\sigma^2}\int_{-\infty}^{\infty}{P(X)}dX+\cfrac{1}
-{2\sigma^2}\int_{-\infty}^{\infty}(X-\mu)^2P(X)dX$$<p>여기서 확률 및 분산의 정의에 따라 다음을 알 수 있고</p>
+\end{aligned}
+$$<p>여기서 $-\log P(X)$는 $\cfrac{1}{2}\log{2\pi\sigma^2}+\cfrac{1}{2\sigma^2}(X-\mu)^2$이고 이를 대입하면</p>
+$$
+H(X)=\cfrac{1}{2}\log{2\pi\sigma^2}\int_{-\infty}^{\infty}{P(X)}dX+\cfrac{1}
+{2\sigma^2}\int_{-\infty}^{\infty}(X-\mu)^2P(X)dX
+$$<p>여기서 확률 및 분산의 정의에 따라 다음을 알 수 있고</p>
 <p>
 $$\int_{-\infty}^{\infty}{P(X)}dX=1$$
 
@@ -570,10 +578,12 @@ $$H(P,Q)=-\sum_{x\in X}P(x)\cdot\log Q(x)$$
 $$KL(P||Q)=-\sum_{x\in X}P(x)\cdot\log{\cfrac{Q(x)}{P(x)}}$$
 </p>
 <p>위 수식은 Entropy와 엮어서 다음과 같이 쓸 수 있습니다.</p>
-$$\begin{align}\\
+$$
+\begin{aligned}\\
 H(P)&amp;=\sum_{x \in X} P(x)\cdot\log P(x)\\
 &amp;=H(P,Q)-KL(P||Q)
-\end{align}$$
+\end{aligned}
+$$
 </div>
 </div>
 </div>
@@ -586,18 +596,22 @@ H(P)&amp;=\sum_{x \in X} P(x)\cdot\log P(x)\\
 <p>분류 문제를 풀기 위해 Neural Network를 학습시킬 때, 우리는 흔히 Cross Entropy로 학습시킵니다. 왜일까요?</p>
 <p>위에서 Entropy, Cross Entropy, KL-Divergence에 대한 수식을 정의했습니다.</p>
 <p>앞서 확률 변수의 Entropy 정의에서 Entropy가 확률 변수의 Expectation과 관련이 있음을 확인했었습니다. 각각을 기댓값 표현으로 써보면,</p>
-$$\begin{align}\\
+$$
+\begin{aligned}\\
 H(X)&amp;=-\sum_x p(x)\log p(x)\\
 &amp;=\sum_x -p(x)\log p(x)\\
 &amp;=\sum_x p(x)\log \cfrac{1}{p(x)}\\
 &amp;=\mathbb{E}_{X\sim p(x)}\bigg[\log \cfrac{1}{p(x)}\bigg]
-\end{align}$$$$\begin{align}\\
+\end{aligned}
+$$$$
+\begin{aligned}\\
 KL(p||q)&amp;=\sum_x p(x)\log \cfrac{p(x)}{q(x)}\\
 &amp;=\mathbb{E}_{X\sim p(x)}\bigg[\log\cfrac{p(x)}{q(x)}\bigg]\\
 &amp;=\mathbb{E}_{X\sim p(x)}\bigg[\log\cfrac{1}{q(x)}-\cfrac{1}{p(x)}\bigg]\\
 &amp;=\mathbb{E}_{X\sim p(x)}\bigg[\log\cfrac{1}{q(x)}\bigg]-\mathbb{E}_{X\sim p(x)}\bigg[\log\cfrac{1}{p(x)}\bigg]\\
 &amp;=\mathbb{E}_{X\sim p(x)}\bigg[\log\cfrac{1}{q(x)}\bigg] - H(p)
-\end{align}$$<p>Cross entropy는 아래와 같이 적을 수 있죠.</p>
+\end{aligned}
+$$<p>Cross entropy는 아래와 같이 적을 수 있죠.</p>
 <p>
 $$H(p,q)=\mathbb{E}_{X\sim p(x)}\bigg[\log\cfrac{1}{q(x)}\bigg]$$
 </p>
@@ -614,14 +628,16 @@ $$H(p,q)=\mathbb{E}_{X\sim p(x)}\bigg[\log\cfrac{1}{q(x)}\bigg]$$
 $$\theta_{ML}=\underset{\theta}{\mathrm{argmax}}\;q(X;\theta)$$
 </p>
 <p>i.i.d 가정에 의해 아래와 같이 수식을 작성하면 (로그 스케일로)</p>
-$$\begin{align}\\
+$$
+\begin{aligned}\\
 \theta_{ML}&amp;=\underset{\theta}{\mathrm{argmax}}\;\prod_{i=1}^{m}q(x_i;\theta)\\
 &amp;=\underset{\theta}{\mathrm{argmax}}\;\sum_{i=1}^{m}\log q(x_i;\theta)\\
 &amp;=\underset{\theta}{\mathrm{argmax}}\;\sum_{i=1}^{m}\frac{1}{m}\log q(x_i;\theta)\\
 &amp;=\underset{\theta}{\mathrm{argmax}}\;\mathbb{E}_{X\sim p(x)}\big[\log q(x)\big]\\
 &amp;=\underset{\theta}{\mathrm{argmin}}\;-\mathbb{E}_{X\sim p(x)}\big[\log q(x)\big]\\
 &amp;=\underset{\theta}{\mathrm{argmin}}\;\mathbb{E}_{X\sim p(x)}\big[\log\frac{1}{q(x)}\big]\\
-\end{align}$$<p>즉, Likelihood를 maximize하는 문제는 Cross Entropy를 Minimize하는 문제로 치환할 수 있습니다.</p>
+\end{aligned}
+$$<p>즉, Likelihood를 maximize하는 문제는 Cross Entropy를 Minimize하는 문제로 치환할 수 있습니다.</p>
 
 </div>
 </div>
