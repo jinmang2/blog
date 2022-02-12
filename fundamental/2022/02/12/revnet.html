@@ -4,22 +4,23 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="twitter:card" content="summary_large_image" /><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>jinmang2’s Tech blog | An easy to use blogging platform with support for Jupyter Notebooks.</title>
+<title>The Reversible Residual Networks | jinmang2’s Tech blog</title>
 <meta name="generator" content="Jekyll v4.1.1" />
-<meta property="og:title" content="jinmang2’s Tech blog" />
+<meta property="og:title" content="The Reversible Residual Networks" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="An easy to use blogging platform with support for Jupyter Notebooks." />
-<meta property="og:description" content="An easy to use blogging platform with support for Jupyter Notebooks." />
-<link rel="canonical" href="https://jinmang2.github.io/" />
-<meta property="og:url" content="https://jinmang2.github.io/" />
+<meta name="description" content="NIPS 2017 논문 리뷰" />
+<meta property="og:description" content="NIPS 2017 논문 리뷰" />
+<link rel="canonical" href="https://jinmang2.github.io/fundamental/2022/02/12/revnet.html" />
+<meta property="og:url" content="https://jinmang2.github.io/fundamental/2022/02/12/revnet.html" />
 <meta property="og:site_name" content="jinmang2’s Tech blog" />
-<meta property="og:image" content="https://jinmang2.github.io/images/logo.png" />
-<meta property="og:type" content="website" />
+<meta property="og:image" content="https://jinmang2.github.io/images/revnet_eq8.PNG" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-02-12T00:00:00-06:00" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta property="twitter:image" content="https://jinmang2.github.io/images/logo.png" />
-<meta property="twitter:title" content="jinmang2’s Tech blog" />
+<meta property="twitter:image" content="https://jinmang2.github.io/images/revnet_eq8.PNG" />
+<meta property="twitter:title" content="The Reversible Residual Networks" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","description":"An easy to use blogging platform with support for Jupyter Notebooks.","headline":"jinmang2’s Tech blog","image":"https://jinmang2.github.io/images/logo.png","name":"jinmang2’s Tech blog","url":"https://jinmang2.github.io/"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-02-12T00:00:00-06:00","datePublished":"2022-02-12T00:00:00-06:00","description":"NIPS 2017 논문 리뷰","headline":"The Reversible Residual Networks","image":"https://jinmang2.github.io/images/revnet_eq8.PNG","mainEntityOfPage":{"@type":"WebPage","@id":"https://jinmang2.github.io/fundamental/2022/02/12/revnet.html"},"url":"https://jinmang2.github.io/fundamental/2022/02/12/revnet.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="https://jinmang2.github.io/feed.xml" title="jinmang2's Tech blog" /><!-- the google_analytics_id gets auto inserted from the config file -->
 
@@ -102,51 +103,69 @@ window.onload = wrap_img;
 </header>
 <main class="page-content" aria-label="Content">
       <div class="wrapper">
-        <div class="home"><h1 id="posts">Posts</h1>
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">The Reversible Residual Networks</h1><p class="page-description">NIPS 2017 논문 리뷰</p><p class="post-meta post-meta-title"><time class="dt-published" datetime="2022-02-12T00:00:00-06:00" itemprop="datePublished">
+        Feb 12, 2022
+      </time>
+       • <span class="read-time" title="Estimated read time">
+    
+    
+      1 min read
+    
+</span></p>
 
+    
+      <p class="category-tags"><i class="fas fa-tags category-tags-icon"></i></i> 
+      
+        <a class="category-tags-link" href="/categories/#Fundamental">Fundamental</a>
+        
+      
+      </p>
+    
 
-  
+    </header>
 
-  <!-- Hide posts if front matter flag hide:true -->
-  
-  
+  <div class="post-content e-content" itemprop="articleBody">
+    <ul id="toc" class="section-nav">
+<li class="toc-entry toc-h1"><a href="#revnet">RevNet</a>
+<ul>
+<li class="toc-entry toc-h2"><a href="#abstract">Abstract</a></li>
+</ul>
+</li>
+</ul><!-- # RevNet: Backpropagation Without Storing Activations -->
+<h1 id="revnet">
+<a class="anchor" href="#revnet" aria-hidden="true"><span class="octicon octicon-link"></span></a>RevNet</h1>
+<ul>
+  <li>2017년도에 나온 논문</li>
+  <li>딥러닝 논문 읽기 모임에서 h-transformer-1d 논문을 뜯어보다 발견한 기법</li>
+  <li>찾아보니 lucidrains님이 reformer를 구현하며 사용한 <code class="language-plaintext highlighter-rouge">_ReversibleFunction</code>을 이후 transformer 구현체에 사용하는 것을 발견</li>
+  <li>residual connection의 단점인 Memory consumption을 개선한 기법</li>
+</ul>
 
-  <!-- Sort posts by rank, then date -->
-  
-  
-  
+<h2 id="abstract">
+<a class="anchor" href="#abstract" aria-hidden="true"><span class="octicon octicon-link"></span></a>Abstract</h2>
+<ul>
+  <li>Residual Conncetion의 bottleneck: <code class="language-plaintext highlighter-rouge">Memory Consumption</code>
+    <ul>
+      <li>역전파 시 gradient 계산을 위해서 필요하다고 한다.</li>
+    </ul>
+  </li>
+</ul>
 
- 
-  
+<p>$y1=x1+F(x2)$</p>
 
-   <!-- Assemble final sorted posts array -->
-  
-  <ul class="post-list"><li><div class="Box box-shadow-medium rounded-1 col-12"><div class="col-4 d-table-cell p-3 v-align-middle">
-        <img class="image-preview " src="/images/revnet_eq8.PNG" />
-      </div><div class="col-8 d-table-cell p-3">
-        <h3>
-          <a class="post-link" href="/fundamental/2022/02/12/revnet.html">
-            The Reversible Residual Networks
-          </a>
-        </h3>
-        <p class="post-meta-description">NIPS 2017 논문 리뷰</p>
-          <p class="post-meta">Feb 12, 2022</p>
-      </div>
-  </div></li><li><div class="Box box-shadow-medium rounded-1 col-12"><div class="col-4 d-table-cell p-3 v-align-middle">
-        <img class="image-preview " src="/images/cross_entropy_fig1.png" />
-      </div><div class="col-8 d-table-cell p-3">
-        <h3>
-          <a class="post-link" href="/implementation/ai-math/2022/02/07/cross-entropy.html">
-            Cross Entropy
-          </a>
-        </h3>
-        <p class="post-meta-description">PyTorch와 Numpy로 구현하는 Cross Entropy</p>
-          <p class="post-meta">Feb 7, 2022</p>
-      </div>
-  </div></li></ul>
+<!-- $$
+\begin{aligned}\\
+y_1=x_1+F(x_2)\\
+y_2=x_2+G(y_1)
+\end{aligned}\\
+$$ -->
 
-    </div>
+  </div><a class="u-url" href="/fundamental/2022/02/12/revnet.html" hidden></a>
+</article>
+
       </div>
     </main><footer class="site-footer h-card">
   <data class="u-url" href="/"></data>
