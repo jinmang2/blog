@@ -8,8 +8,8 @@
 <meta name="generator" content="Jekyll v4.1.1" />
 <meta property="og:title" content="How to generate text?" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="🤗 transformers 뜯어보기 시리즈" />
-<meta property="og:description" content="🤗 transformers 뜯어보기 시리즈" />
+<meta name="description" content="🤗 transformers를 활용하여 language generation의 다른 decoding methods를 사용해보자!" />
+<meta property="og:description" content="🤗 transformers를 활용하여 language generation의 다른 decoding methods를 사용해보자!" />
 <link rel="canonical" href="https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/03/01/how-to-generate.html" />
 <meta property="og:url" content="https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/03/01/how-to-generate.html" />
 <meta property="og:site_name" content="jinmang2’s Tech blog" />
@@ -20,7 +20,7 @@
 <meta property="twitter:image" content="https://jinmang2.github.io/images/how_to_generate_text.png" />
 <meta property="twitter:title" content="How to generate text?" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-03-01T00:00:00-06:00","datePublished":"2022-03-01T00:00:00-06:00","description":"🤗 transformers 뜯어보기 시리즈","headline":"How to generate text?","image":"https://jinmang2.github.io/images/how_to_generate_text.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/03/01/how-to-generate.html"},"url":"https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/03/01/how-to-generate.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-03-01T00:00:00-06:00","datePublished":"2022-03-01T00:00:00-06:00","description":"🤗 transformers를 활용하여 language generation의 다른 decoding methods를 사용해보자!","headline":"How to generate text?","image":"https://jinmang2.github.io/images/how_to_generate_text.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/03/01/how-to-generate.html"},"url":"https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/03/01/how-to-generate.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="https://jinmang2.github.io/feed.xml" title="jinmang2's Tech blog" /><!-- the google_analytics_id gets auto inserted from the config file -->
 
@@ -106,7 +106,7 @@ window.onload = wrap_img;
         <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title p-name" itemprop="name headline">How to generate text?</h1><p class="page-description">🤗 transformers 뜯어보기 시리즈</p><p class="post-meta post-meta-title"><time class="dt-published" datetime="2022-03-01T00:00:00-06:00" itemprop="datePublished">
+    <h1 class="post-title p-name" itemprop="name headline">How to generate text?</h1><p class="page-description">🤗 transformers를 활용하여 language generation의 다른 decoding methods를 사용해보자!</p><p class="post-meta post-meta-title"><time class="dt-published" datetime="2022-03-01T00:00:00-06:00" itemprop="datePublished">
         Mar 1, 2022
       </time>
        • <span class="read-time" title="Estimated read time">
@@ -176,11 +176,19 @@ window.onload = wrap_img;
 <li class="toc-entry toc-h3"><a href="#(3)-Language-Model-Head">(3) Language Model Head </a></li>
 </ul>
 </li>
-<li class="toc-entry toc-h2"><a href="#Greedy-Search">Greedy Search </a></li>
-<li class="toc-entry toc-h2"><a href="#Beam-Search">Beam Search </a></li>
-<li class="toc-entry toc-h2"><a href="#Sampling">Sampling </a></li>
-<li class="toc-entry toc-h2"><a href="#Top-K-Sampling">Top-K Sampling </a></li>
-<li class="toc-entry toc-h2"><a href="#Top-p-(nucleus)-Sampling">Top-p (nucleus) Sampling </a></li>
+<li class="toc-entry toc-h2"><a href="#Maximization">Maximization </a>
+<ul>
+<li class="toc-entry toc-h3"><a href="#Greedy-Search">Greedy Search </a></li>
+<li class="toc-entry toc-h3"><a href="#Beam-Search">Beam Search </a></li>
+</ul>
+</li>
+<li class="toc-entry toc-h2"><a href="#Sampling">Sampling </a>
+<ul>
+<li class="toc-entry toc-h3"><a href="#Temperature-Sampling">Temperature-Sampling </a></li>
+<li class="toc-entry toc-h3"><a href="#Top-K-Sampling">Top-K Sampling </a></li>
+<li class="toc-entry toc-h3"><a href="#Top-p-(nucleus)-Sampling">Top-p (nucleus) Sampling </a></li>
+</ul>
+</li>
 <li class="toc-entry toc-h2"><a href="#Conclusion">Conclusion </a></li>
 <li class="toc-entry toc-h2"><a href="#Appendix">Appendix </a></li>
 </ul>
@@ -944,9 +952,18 @@ $$P(w_{1:T}|W_0)=\prod_{t=1}^{T}P(w_t|w_{1:t-1},W_0),\;\text{with}\, w_{1:0}=\em
 <div class="cell border-box-sizing text_cell rendered">
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Greedy-Search">
-<a class="anchor" href="#Greedy-Search" aria-hidden="true"><span class="octicon octicon-link"></span></a>Greedy Search<a class="anchor-link" href="#Greedy-Search"> </a>
+<h2 id="Maximization">
+<a class="anchor" href="#Maximization" aria-hidden="true"><span class="octicon octicon-link"></span></a>Maximization<a class="anchor-link" href="#Maximization"> </a>
 </h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Greedy-Search">
+<a class="anchor" href="#Greedy-Search" aria-hidden="true"><span class="octicon octicon-link"></span></a>Greedy Search<a class="anchor-link" href="#Greedy-Search"> </a>
+</h3>
 <p>Greedy search는 단순하게 다음 단어로 가장 높은 확률을 가지는 단어를 선택합니다. 수식으로 이를 다시 쓰면,</p>
 <p>
 $$w_t=\underset{w}{\mathrm{argmax}}{P(w|w_{1:t-1})}$$
@@ -1055,9 +1072,9 @@ $$w_t=\underset{w}{\mathrm{argmax}}{P(w|w_{1:t-1})}$$
 <div class="cell border-box-sizing text_cell rendered">
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Beam-Search">
+<h3 id="Beam-Search">
 <a class="anchor" href="#Beam-Search" aria-hidden="true"><span class="octicon octicon-link"></span></a>Beam Search<a class="anchor-link" href="#Beam-Search"> </a>
-</h2>
+</h3>
 <p>Beam search는 각 time step에서 가장 가능성이 높은 가설을 <code>num_beams</code>만큼 유지하고 결국 전체 확률이 가장 높은 가설(hypothesis)를 선택하여 숨겨진 높은 확률의 word sequence를 놓칠 위험을 줄입니다.</p>
 <p>아래 예시는 <code>num_beams</code>가 2일 때 beam search의 동작 과정입니다.</p>
 <p><img src="https://huggingface.co/blog/assets/02_how-to-generate/beam_search.png" alt="img"></p>
@@ -1344,6 +1361,15 @@ $$w_t=\underset{w}{\mathrm{argmax}}{P(w|w_{1:t-1})}$$
 <h2 id="Sampling">
 <a class="anchor" href="#Sampling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sampling<a class="anchor-link" href="#Sampling"> </a>
 </h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Temperature-Sampling">
+<a class="anchor" href="#Temperature-Sampling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Temperature-Sampling<a class="anchor-link" href="#Temperature-Sampling"> </a>
+</h3>
 <p>가장 기본적인 형태의 sampling은 다음 단어 $w_t$를 conditional probability distribution에 따라 임의로 선택하는 것입니다.</p>
 <p>
 $$w_t\sim P(w|w_{1:t-1})$$
@@ -1555,9 +1581,9 @@ $$w_t\sim P(w|w_{1:t-1})$$
 <div class="cell border-box-sizing text_cell rendered">
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Top-K-Sampling">
+<h3 id="Top-K-Sampling">
 <a class="anchor" href="#Top-K-Sampling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Top-K Sampling<a class="anchor-link" href="#Top-K-Sampling"> </a>
-</h2>
+</h3>
 <p>Fan 연구진은 아주 간단하지만 강력한 sampling scheme인 <strong>Top-K</strong>를 소개했습니다.</p>
 <ul>
 <li><a href="https://arxiv.org/pdf/1805.04833.pdf">Hierarchical Neural Story Generation, Fan et. al (2018)</a></li>
@@ -1643,9 +1669,9 @@ $$w_t\sim P(w|w_{1:t-1})$$
 <div class="cell border-box-sizing text_cell rendered">
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Top-p-(nucleus)-Sampling">
+<h3 id="Top-p-(nucleus)-Sampling">
 <a class="anchor" href="#Top-p-(nucleus)-Sampling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Top-p (nucleus) Sampling<a class="anchor-link" href="#Top-p-(nucleus)-Sampling"> </a>
-</h2>
+</h3>
 <p>가장 높은 K개의 단어를 선택하는 대신 <strong>Top-P</strong> sampling은 누적 확률이 확률 p를 초과하는 가능한 가장 작은 단어 집합에서 선택합니다. 그런 다음 probability mass는 이 단어 set 사이에 재분배됩니다. 이런 식으로 단어 집합의 크기(a.k.a the number of words in the set)은 다음 단어의 확률 분포에 따라 동적으로 증가하거나 감소할 수 있습니다.</p>
 <p>위를 시각화해봅시다!</p>
 <p><img src="https://huggingface.co/blog/assets/02_how-to-generate/top_p_sampling.png" alt="img"></p>
