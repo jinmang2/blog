@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="twitter:card" content="summary_large_image" /><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>How to generate text? | jinmang2’s Tech blog</title>
+<meta name="generator" content="Jekyll v4.1.1" />
+<meta property="og:title" content="How to generate text?" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="🤗 transformers 뜯어보기 시리즈" />
+<meta property="og:description" content="🤗 transformers 뜯어보기 시리즈" />
+<link rel="canonical" href="https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/02/07/how-to-generate.html" />
+<meta property="og:url" content="https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/02/07/how-to-generate.html" />
+<meta property="og:site_name" content="jinmang2’s Tech blog" />
+<meta property="og:image" content="https://jinmang2.github.io/images/how_to_generate_text.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-02-07T00:00:00-06:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://jinmang2.github.io/images/how_to_generate_text.png" />
+<meta property="twitter:title" content="How to generate text?" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-02-07T00:00:00-06:00","datePublished":"2022-02-07T00:00:00-06:00","description":"🤗 transformers 뜯어보기 시리즈","headline":"How to generate text?","image":"https://jinmang2.github.io/images/how_to_generate_text.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/02/07/how-to-generate.html"},"url":"https://jinmang2.github.io/%F0%9F%A4%97%20huggingface/nlp/2022/02/07/how-to-generate.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="https://jinmang2.github.io/feed.xml" title="jinmang2's Tech blog" /><!-- the google_analytics_id gets auto inserted from the config file -->
+
+
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-163863775-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-163863775-1');
+</script>
+
+
+<link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Primer/15.2.0/primer.css" integrity="sha512-xTz2ys4coGAOz8vuV1NcQBkgVmKhsSEtjbqyMJbBHRplFuvKIUo6xhLHpAyPt9mfR6twHJgn9OgVLuqOvjeBhg==" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" integrity="sha512-1PKOgIY59xJ8Co8+NE6FZ+LOAZKjy+KY8iq0G4B3CyeY6wYHN3yt9PW0XpSriVlkMXe40PTKnXrLnZ9+fkDaog==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/katex.min.css" integrity="sha512-h7nl+xz8wgDlNM4NqKEM4F1NkIRS17M9+uJwIGwuo8vGqIl4BhuCKdxjWEINm+xyrUjNCnK5dCrhM0sj+wTIXw==" crossorigin="anonymous" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/katex.min.js" integrity="sha512-/CMIhXiDA3m2c9kzRyd97MTb3MC6OVnx4TElQ7fkkoRghwDf6gi41gaT1PwF270W6+J60uTmwgeRpNpJdRV6sg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/contrib/auto-render.min.js" integrity="sha512-Do7uJAaHZm5OLrIv/yN4w0iG1dbu01kzdMNnFfu/mAqgUk6Nniv2JYHcwH+cNwjqgLcqcuBBk+JRvprLVI8azg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha512-0doc9hKxR3PYwso42RD1p5ySZpzzuDiOwMrdCEh2WdJZCjcmFKc/wEnL+z8fBQrnHoiNWbo+3fiGkOYXBdQp4A==" crossorigin="anonymous"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement( document.body, {
+        delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "[%", right: "%]", display: true},
+            {left: "$", right: "$", display: false}
+        ]}
+        );
+    });
+    </script>
+
+
+<script>
+function wrap_img(fn) {
+    if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
+        var elements = document.querySelectorAll(".post img");
+        Array.prototype.forEach.call(elements, function(el, i) {
+            if (el.getAttribute("title") && (el.className != "emoji")) {
+                const caption = document.createElement('figcaption');
+                var node = document.createTextNode(el.getAttribute("title"));
+                caption.appendChild(node);
+                const wrapper = document.createElement('figure');
+                wrapper.className = 'image';
+                el.parentNode.insertBefore(wrapper, el);
+                el.parentNode.removeChild(el);
+                wrapper.appendChild(el);
+                wrapper.appendChild(caption);
+            }
+        });
+    } else { document.addEventListener('DOMContentLoaded', fn); }
+}
+window.onload = wrap_img;
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+    // add link icon to anchor tags
+    var elem = document.querySelectorAll(".anchor-link")
+    elem.forEach(e => (e.innerHTML = '<i class="fas fa-link fa-xs"></i>'));
+    });
+</script>
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">jinmang2&#39;s Tech blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About Me</a><a class="page-link" href="/search/">Search</a><a class="page-link" href="/categories/">Tags</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">How to generate text?</h1><p class="page-description">🤗 transformers 뜯어보기 시리즈</p><p class="post-meta post-meta-title"><time class="dt-published" datetime="2022-02-07T00:00:00-06:00" itemprop="datePublished">
+        Feb 7, 2022
+      </time>
+       • <span class="read-time" title="Estimated read time">
+    
+    
+      20 min read
+    
+</span></p>
+
+    
+      <p class="category-tags"><i class="fas fa-tags category-tags-icon"></i></i> 
+      
+        <a class="category-tags-link" href="/categories/#🤗 huggingface">🤗 huggingface</a>
+        &nbsp;
+      
+        <a class="category-tags-link" href="/categories/#nlp">nlp</a>
+        
+      
+      </p>
+    
+
+    
+      
+        <div class="pb-5 d-flex flex-justify-center">
+          <div class="px-2">
+
+    <a href="https://github.com/jinmang2/jinmang2.github.io/tree/main/_notebooks/2022-02-07-how-to-generate.ipynb" role="button" target="_blank">
+<img class="notebook-badge-image" src="/assets/badges/github.svg" alt="View On GitHub">
+    </a>
+</div>
+
+          <div class="px-2">
+    <a href="https://mybinder.org/v2/gh/jinmang2/jinmang2.github.io/main?filepath=_notebooks%2F2022-02-07-how-to-generate.ipynb" target="_blank">
+        <img class="notebook-badge-image" src="/assets/badges/binder.svg" alt="Open In Binder"/>
+    </a>
+</div>
+
+          <div class="px-2">
+    <a href="https://colab.research.google.com/github/jinmang2/jinmang2.github.io/blob/main/_notebooks/2022-02-07-how-to-generate.ipynb" target="_blank">
+        <img class="notebook-badge-image" src="/assets/badges/colab.svg" alt="Open In Colab"/>
+    </a>
+</div>
+
+          <div class="px-2">
+  <a href="https://deepnote.com/launch?url=https%3A%2F%2Fgithub.com%2Fjinmang2%2Fjinmang2.github.io%2Fblob%2Fmain%2F_notebooks%2F2022-02-07-how-to-generate.ipynb" target="_blank">
+      <img class="notebook-badge-image" src="/assets/badges/deepnote.svg" alt="Launch in Deepnote"/>
+  </a>
+</div>
+
+        </div>
+      </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <ul id="toc" class="section-nav">
+<li class="toc-entry toc-h1"><a href="#Introduction">Introduction </a></li>
+<li class="toc-entry toc-h1"><a href="#Using-different-decoding-methods-for-language-generation-with-Transformers">Using different decoding methods for language generation with Transformers </a>
+<ul>
+<li class="toc-entry toc-h2"><a href="#Introduction">Introduction </a>
+<ul>
+<li class="toc-entry toc-h3"><a href="#KoGPT2">KoGPT2 </a></li>
+</ul>
+</li>
+<li class="toc-entry toc-h2"><a href="#Calculate-word-probability">Calculate word probability </a>
+<ul>
+<li class="toc-entry toc-h3"><a href="#(1)-word-token/position-embedding">(1) word token/position embedding </a></li>
+<li class="toc-entry toc-h3"><a href="#(2)-Transformer-Layers">(2) Transformer Layers </a></li>
+<li class="toc-entry toc-h3"><a href="#(3)-Language-Model-Head">(3) Language Model Head </a></li>
+</ul>
+</li>
+<li class="toc-entry toc-h2"><a href="#Greedy-Search">Greedy Search </a></li>
+<li class="toc-entry toc-h2"><a href="#Beam-Search">Beam Search </a></li>
+<li class="toc-entry toc-h2"><a href="#Sampling">Sampling </a></li>
+<li class="toc-entry toc-h2"><a href="#Top-K-Sampling">Top-K Sampling </a></li>
+<li class="toc-entry toc-h2"><a href="#Top-p-(nucleus)-Sampling">Top-p (nucleus) Sampling </a></li>
+<li class="toc-entry toc-h2"><a href="#Conclusion">Conclusion </a></li>
+<li class="toc-entry toc-h2"><a href="#Appendix">Appendix </a></li>
+</ul>
+</li>
+<li class="toc-entry toc-h1"><a href="#GenerationMixin-뜯어보기">GenerationMixin 뜯어보기 </a></li>
+</ul><!--
+#################################################
+### THIS FILE WAS AUTOGENERATED! DO NOT EDIT! ###
+#################################################
+# file to edit: _notebooks/2022-02-07-how-to-generate.ipynb
+-->
+
+<div class="container" id="notebook-container">
+        
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Introduction">
+<a class="anchor" href="#Introduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Introduction<a class="anchor-link" href="#Introduction"> </a>
+</h1>
+<p>본 포스팅에서는 텍스트를 생성하는 방법에 대하여 알아보겠습니다.</p>
+<p>해당 포스팅은 patrick von platen님의 포스팅을 번역한 내용과 제가 직접 🤗 transformers를 뜯어본 내용을 기반으로 작성하였습니다.</p>
+<ul>
+<li><a href="https://huggingface.co/blog/how-to-generate">https://huggingface.co/blog/how-to-generate</a></li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Using-different-decoding-methods-for-language-generation-with-Transformers">
+<a class="anchor" href="#Using-different-decoding-methods-for-language-generation-with-Transformers" aria-hidden="true"><span class="octicon octicon-link"></span></a>Using different decoding methods for language generation with Transformers<a class="anchor-link" href="#Using-different-decoding-methods-for-language-generation-with-Transformers"> </a>
+</h1>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Introduction">
+<a class="anchor" href="#Introduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Introduction<a class="anchor-link" href="#Introduction"> </a>
+</h2>
+<p>최근 몇 년 동안 OpenAI의 GPT-2 모델과 같이 수백만 개의 웹 페이지에서 훈련된 large-scale transformer 기반 언어 모델의 등장으로 <code>open-ended language generation</code>에 대한 관심이 높아졌습니다. Conditioned open-ended language generation의 결과는 굉장히 인상적입니다.</p>
+<ul>
+<li><a href="https://openai.com/blog/better-language-models/#samples">GPT2 on unicorns</a></li>
+<li><a href="https://medium.com/@amanrusia/xlnet-speaks-comparison-to-gpt-2-ea1a4e9ba39e">XLNet</a></li>
+<li><a href="https://blog.einstein.ai/introducing-a-conditional-transformer-language-model-for-controllable-generation/">Controlled language with CTRL</a></li>
+</ul>
+<p>2017년에 transformer가 등장한 이래로 아키텍쳐를 수정하는 방법 및 방대한 unsupervised 학습 데이터(self-supervised를 위한)들이 있지만 <strong>더 나은 디코딩 방법(better decoding methods)</strong> 또한 중요한 역할을 했습니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>이 블로그 포스트는 다양한 디코딩 전략에 대한 간략한 개요를 제공하고 더 중요한 것은 유명한 🤗 transformers 라이브러리를 사용하여 아주 적은 노력으로 이를 구현할 수 있는 방법을 보여줍니다!</p>
+<ul>
+<li>jinmang2: 또한 제 블로그 포스팅에서 여러분들은 🤗 transformers에서 Decoding methods가 어떻게 구현되어 있는지도 알 수 있습니다.</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>본 게시글에서 다루는 모든 기능들(functionalities)은 모두 auto-regressive language generation(더 자세한 내용은 <a href="http://jalammar.github.io/illustrated-gpt2/">Jay Alammar님의 포스팅</a>을 확인해주세요)에 사용할 수 있습니다. <code>auto-regressive</code>란 간단히 말해 아래 가정을 기반으로 둔 방법론입니다.</p>
+
+<pre><code>Assumption
+==========
+The probability distribution of a word sequence can be decomposed into
+the product of conditional next word distributions.</code></pre>
+<p>word sequence, 즉, 단어로 이루어진 수열(문장이라고 이해하시면 됩니다)은 다음 단어가 나올 조건부 분포들의 곱으로 분해가 가능하다라는 전제를 깔고 있습니다.</p>
+<p>수식으로 보겠습니다.</p>
+<p>
+$$P(w_{1:T}|W_0)=\prod_{t=1}^{T}P(w_t|w_{1:t-1},W_0),\;\text{with}\, w_{1:0}=\emptyset$$
+</p>
+<ul>
+<li>$W_0$은 initial context word sequence</li>
+<li>$T$는 문장의 길이입니다.<ul>
+<li>patrick님 포스팅 본문에서는 생성된 문장의 길이를 의미하시는 것 같습니다. 생성은 단어(혹은 토큰) 단위로 길이가 1씩 늘어나기 때문에 on-the-fly라는 표현을 사용하신 것 같습니다.</li>
+</ul>
+</li>
+<li>Timestep $t$가 $T$가 되면? 문장을 전부 분해했다는 뜻이겠죠?(conditional next word dists.로) 이 때는 $P(w_t|w_{1:t-1},W_0)$에서 <code>EOS</code> 토큰이 생성됩니다.<ul>
+<li>
+<code>EOS</code>는 End of Sentence(혹은 Sequence)의 약자로 문장의 끝을 의미합니다.</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>이제 가장 중요한 네 가지 decoding 방법에 대하여 소개해드리도록 하겠습니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>블로그 포스팅의 예시를 보셔도 좋고 아무래도 한국어로 번역된 포스팅이기 때문에 한국어 언어 모델로 예시를 들어드리는 것이 보기 좋을 것 같습니다. 이에 대한 세팅을 수행하죠.</p>
+<ul>
+<li>tensorflow는 사용하지 않습니다.</li>
+</ul>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>pip install -q git+https://github.com/huggingface/transformers.git
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="KoGPT2">
+<a class="anchor" href="#KoGPT2" aria-hidden="true"><span class="octicon octicon-link"></span></a>KoGPT2<a class="anchor-link" href="#KoGPT2"> </a>
+</h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>예시에서 사용할 모델은 SKT에서 개발한 KoGPT2이며 자세한 설명은 아래 링크를 참고해주세요.</p>
+<ul>
+<li><a href="https://github.com/SKT-AI/KoGPT2">https://github.com/SKT-AI/KoGPT2</a></li>
+<li><a href="https://huggingface.co/skt/kogpt2-base-v2">https://huggingface.co/skt/kogpt2-base-v2</a></li>
+</ul>
+<p>간략한 소개는 다음과 같습니다.</p>
+<ul>
+<li>Vocab size: 51,200</li>
+<li>이모지, 이모티콘 등을 추가하여 해당 토큰의 인식 능력 개선</li>
+<li>unused token을 100개 사용하여 필요한 task에 따라 자유롭게 정의 가능</li>
+<li>metaspace는 <code>▁</code>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th style="text-align:center"># of params</th>
+<th style="text-align:center">Type</th>
+<th style="text-align:right"># of layers</th>
+<th style="text-align:right"># of heads</th>
+<th style="text-align:right">ffn_dim</th>
+<th style="text-align:right">hidden_dims</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kogpt2-base-v2</code></td>
+<td style="text-align:center">125M</td>
+<td style="text-align:center">Decoder</td>
+<td style="text-align:right">12</td>
+<td style="text-align:right">12</td>
+<td style="text-align:right">3072</td>
+<td style="text-align:right">768</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>사용한 데이터는 한국어 위키 백과, 뉴스, 모두의 말뭉치 v1.0, 청와대 국민청원 등 다양한 데이터</li>
+</ul>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">AutoTokenizer</span><span class="p">,</span> <span class="n">AutoModelForCausalLM</span>
+
+<span class="n">model_path_or_name</span> <span class="o">=</span> <span class="s2">"skt/kogpt2-base-v2"</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_path_or_name</span><span class="p">,</span> <span class="n">force_download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_path_or_name</span><span class="p">,</span> <span class="n">force_download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">tokenizer</span> <span class="c1"># Rust로 구현된 `Fast`한 tokenizer</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>PreTrainedTokenizerFast(name_or_path='skt/kogpt2-base-v2', vocab_size=51200, model_max_len=1000000000000000019884624838656, is_fast=True, padding_side='right', special_tokens={'bos_token': '&lt;|endoftext|&gt;', 'eos_token': '&lt;|endoftext|&gt;', 'unk_token': '&lt;|endoftext|&gt;'})</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="s2">"근육이 커지기 위해서는"</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>['▁근육이', '▁커', '지기', '▁위해서는']</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="c1"># AutoModelForCausalLM으로 GPT2의 CLM class 호출</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>'GPT2LMHeadModel'</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">num_of_parameters</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">num_of_parameters</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="c1"># 125M</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>125164032
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Calculate-word-probability">
+<a class="anchor" href="#Calculate-word-probability" aria-hidden="true"><span class="octicon octicon-link"></span></a>Calculate word probability<a class="anchor-link" href="#Calculate-word-probability"> </a>
+</h2>
+<p>Q) 단어별 확률은 어떻게 구하나요?</p>
+<p>A) 위에서 <code>GPT2ForLMHeadModel</code>을 Causal-LM을 수행하기 위한 모델로 불렀죠? 해당 
+모델이 left-to-right으로 contidional next word distribution을 모델링해줍니다!</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>LMHeadModel(Causal-LM을 하기 위한 모델)은 크게 세 파트로 나뉘어져 있습니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="(1)-word-token/position-embedding">
+<a class="anchor" href="#(1)-word-token/position-embedding" aria-hidden="true"><span class="octicon octicon-link"></span></a>(1) word token/position embedding<a class="anchor-link" href="#(1)-word-token/position-embedding"> </a>
+</h3>
+<ul>
+<li>인코딩된 word sequence에 대해 embedding value를 계산합니다.</li>
+<li>단어(혹은 토큰)의 뜻을 word token embedding으로,</li>
+<li>단어(혹은 토큰)의 위치를 word position embedding으로 벡터화해줍니다.<ul>
+<li>position embedding의 경우 layer에 해당 정보를 넣어주는 경우도 있지만 (relative position embedding) 해당 포스팅의 범주를 넘어서기 때문에 향후 소개하도록 하겠습니다.</li>
+</ul>
+</li>
+</ul>
+<p>Note that: 아래 코드는 GPT2 script에서 발췌한 코드입니다! wte, wpe를 구하는 것은 model by model이에요!"</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">word_sequence</span> <span class="o">=</span> <span class="s2">"근육이 커지기 위해서는"</span>
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">word_sequence</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">"pt"</span><span class="p">)</span>
+<span class="n">input_ids</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">"input_ids"</span><span class="p">]</span>
+<span class="n">input_shape</span> <span class="o">=</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+<span class="n">input_ids</span> <span class="o">=</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">input_ids</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[33245, 10114, 12748, 11357]])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>실제로 모델 인풋에 어떻게 들어가나 확인해보죠.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">inspect</span>
+
+<span class="c1"># input_ids, attention_mask, token_type_ids, position_ids가 중요해요</span>
+<span class="c1"># forward와 __call__의 관계는 `torch.nn.Module`을 상속받아서 그래요</span>
+<span class="c1"># 이건 다음 학습 기회로!</span>
+<span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">forward</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>mappingproxy({'input_ids': &lt;Parameter "input_ids=None"&gt;,
+              'past_key_values': &lt;Parameter "past_key_values=None"&gt;,
+              'attention_mask': &lt;Parameter "attention_mask=None"&gt;,
+              'token_type_ids': &lt;Parameter "token_type_ids=None"&gt;,
+              'position_ids': &lt;Parameter "position_ids=None"&gt;,
+              'head_mask': &lt;Parameter "head_mask=None"&gt;,
+              'inputs_embeds': &lt;Parameter "inputs_embeds=None"&gt;,
+              'encoder_hidden_states': &lt;Parameter "encoder_hidden_states=None"&gt;,
+              'encoder_attention_mask': &lt;Parameter "encoder_attention_mask=None"&gt;,
+              'use_cache': &lt;Parameter "use_cache=None"&gt;,
+              'output_attentions': &lt;Parameter "output_attentions=None"&gt;,
+              'output_hidden_states': &lt;Parameter "output_hidden_states=None"&gt;,
+              'return_dict': &lt;Parameter "return_dict=None"&gt;})</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>위에서 확인한 것 처럼 position type ids를 직접 입력에 넣어줄 수도 있지만 이번엔 직접 만들어줄게요! (실제로 source code에서 position_ids가 None이면 아래처럼 만들어줘요)</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+
+<span class="n">position_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+<span class="n">position_ids</span> <span class="o">=</span> <span class="n">position_ids</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">position_ids</span> <span class="c1"># 네 개의 토큰에 대한 위치 정보</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[0, 1, 2, 3]])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Word token embedding의 경우 vocab의 수만큼 vector가 정의되어 있어야 합니다.</p>
+<p>하지만 Word position embedding의 경우 tokenizing의 결과로 나온 토큰의 수로 매핑이 되기 때문에 미리 max_length를 정해둬요. KoGPT2의 경우엔 1,024네요!</p>
+<p>위와 같은 이유로 wte와 wpe의 matrix shape은 다릅니다!</p>
+<ul>
+<li>GPT2는 absolute position embedding을 사용하기 때문이에요!</li>
+<li>Transformer의 SInusoidal encoding을 사용하면 extrapolate를 할 수 있기 때문에 저런 위치 고정 문제는 생기지 않겠죠!</li>
+</ul>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="p">(</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">wte</span><span class="p">,</span> <span class="c1"># vocab_size X hidden_dim</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">wpe</span><span class="p">,</span> <span class="c1"># max_position_length X hidden_dim</span>
+<span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>(Embedding(51200, 768), Embedding(1024, 768))</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">inputs_embeds</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">wte</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span>
+<span class="n">position_embeds</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">wpe</span><span class="p">(</span><span class="n">position_ids</span><span class="p">)</span>
+
+<span class="n">hidden_states</span> <span class="o">=</span> <span class="n">inputs_embeds</span> <span class="o">+</span> <span class="n">position_embeds</span>
+<span class="n">hidden_states</span><span class="o">.</span><span class="n">shape</span> <span class="c1"># (batch_size, sequence length, hidden_dim)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>torch.Size([1, 4, 768])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="(2)-Transformer-Layers">
+<a class="anchor" href="#(2)-Transformer-Layers" aria-hidden="true"><span class="octicon octicon-link"></span></a>(2) Transformer Layers<a class="anchor-link" href="#(2)-Transformer-Layers"> </a>
+</h3>
+<ul>
+<li>Self-Attention</li>
+<li>Feed-Forward Network</li>
+<li>기타 모듈 등</li>
+</ul>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"n_layers: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">h</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">block</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">h</span><span class="p">):</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">block</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
+    <span class="n">hidden_states</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">hidden_states</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">transformer</span><span class="o">.</span><span class="n">ln_f</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span> <span class="c1"># final layer norm</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>n_layers: 12
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">hidden_states</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>torch.Size([1, 4, 768])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="(3)-Language-Model-Head">
+<a class="anchor" href="#(3)-Language-Model-Head" aria-hidden="true"><span class="octicon octicon-link"></span></a>(3) Language Model Head<a class="anchor-link" href="#(3)-Language-Model-Head"> </a>
+</h3>
+<ul>
+<li>Transformer layer들을 통과하여 나온 hidden_states를 각 토큰 별 확률로 매핑</li>
+</ul>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">lm_logits</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">lm_head</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
+<span class="n">lm_logits</span><span class="o">.</span><span class="n">shape</span> <span class="c1"># (batch_size, sequence_length, vocab_size)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>torch.Size([1, 4, 51200])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>이렇게 세 가지 과정을 거쳐서 모델은 Causal-LM, 이전 단어들로부터 다음 단어를 예측하는 Conditional next word distribution을 학습하게 됩니다. 추론에서는 이제부터 소개할 decoding 방법론으로 계산된 확률을 어떻게 사용하느냐 이것이 갈리겠지요!</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Greedy-Search">
+<a class="anchor" href="#Greedy-Search" aria-hidden="true"><span class="octicon octicon-link"></span></a>Greedy Search<a class="anchor-link" href="#Greedy-Search"> </a>
+</h2>
+<p>Greedy search는 단순하게 다음 단어로 가장 높은 확률을 가지는 단어를 선택합니다. 수식으로 이를 다시 쓰면,</p>
+<p>
+$$w_t=\underset{w}{\mathrm{argmax}}{P(w|w_{1:t-1})}$$
+</p>
+<ul>
+<li>$W_0$는 생략된 것 같습니다.</li>
+</ul>
+<p>이를 이미지로 그려보면 아래와 같습니다.</p>
+<p><img src="https://huggingface.co/blog/assets/02_how-to-generate/greedy_search.png" alt="img"></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><strong><code>The</code></strong> 라는 단어로부터 시작하여 알고리즘은 탐욕적으로(greedily) 다음으로 올 단어로 가장 높은 확률을 가지는 <code>nice</code>를 선택합니다. 이렇게 종료 시점까지 탐욕적으로 선택하면 위의 예시에서 최종적으로 생성된 word sequence는 (<code>The</code>, <code>nice</code>, <code>woman</code>)이 될 것입니다.</p>
+<ul>
+<li>해당 word sequence가 나올 확률은 $0.5 \times 0.4 = 0.2$로 꽤나 높습니다.</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>구현 상세는 제가 뜯어보며 알아낸 정보를 다루는 Chapter 2에서 다루고 huggingface에서 어떻게 사용할 수 있는지 알아봅시다.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">input_ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"근육이 커지기 위해서는"</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">"pt"</span><span class="p">)</span>
+
+<span class="c1"># CLM으로 문장을 생성 (output length가 128에 도달할 때 까지)</span>
+<span class="n">greedy_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">greedy_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+근육이 커지기 위해서는 무엇보다 규칙적인 생활습관이 중요하다.
+특히, 아침식사는 단백질과 비타민, 무기질 등 영양소가 풍부한 음식을 골고루 섭취하는 것이 좋다.
+또한 규칙적인 운동은 근육을 강화시켜주는 효과가 있다.
+특히, 아침식사는 단백질과 비타민, 무기질 등 영양소가 풍부한 음식을 골고루 섭취하는 것이 좋다.
+또한 규칙적인 운동은 근육을 강화시켜주는 효과가 있다.
+특히, 아침식사는 단백질과 비타민, 무기질 등 영양소가 풍부한 음식을 골고루 섭취하는 것이 좋다.
+또한 규칙적인 운동은 근육을 강화시켜주는 효과가 있다.
+근육을 강화시켜주는 운동은 근육을 강화시켜주는 효과가 있다.
+근육을 강화시켜주는 운동은 근육을 강화
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>오... 잘 생성해냈군요 ㅎㅎ. 하지만 자세히 보면 규칙적인 생활습관이 중요하다고 내용을 반복하는 문제가 보이는군요...!</p>
+<p>이는 일반적으로 natural language generation에서 일반적인 문제이며 greedy search, beam search와 같은 maximization 기법에서 훨씬 더 심하게 발생됩니다.</p>
+<ul>
+<li><a href="https://arxiv.org/abs/1610.02424">Diverse Beam Search: Decoding Diverse Solutions from Neural Sequence Models, Vijayakumar et al., 2016</a></li>
+<li><a href="https://arxiv.org/abs/1701.03185">Generating High-Quality and Informative Conversation Responses with Sequence-to-Sequence Models, Shao et al., 2017</a></li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Greedy search의 주된 단점은 낮은 확률 사이에 숨겨진 높은 확률의 단어를 놓치는 것
+입니다. 위의 예시에서도 (<code>The</code>, <code>dog</code>, <code>has</code>)를 놓쳤죠. 이 문장은 사실 $0.4 \times 0.9 = 0.36$으로 위의 문장보다 조금 더 가능성이 있는 문장입니다.</p>
+<p>고맙게도 beam search가 위 문제를 조금 덜어줍니다!</p>
+<ul>
+<li>alleviate입니다. 해결해주지는 않습니다...</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Beam-Search">
+<a class="anchor" href="#Beam-Search" aria-hidden="true"><span class="octicon octicon-link"></span></a>Beam Search<a class="anchor-link" href="#Beam-Search"> </a>
+</h2>
+<p>Beam search는 각 time step에서 가장 가능성이 높은 가설을 <code>num_beams</code>만큼 유지하고 결국 전체 확률이 가장 높은 가설(hypothesis)를 선택하여 숨겨진 높은 확률의 word sequence를 놓칠 위험을 줄입니다.</p>
+<p>아래 예시는 <code>num_beams</code>가 2일 때 beam search의 동작 과정입니다.</p>
+<p><img src="https://huggingface.co/blog/assets/02_how-to-generate/beam_search.png" alt="img"></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Time step 1에서 가장 가능성이 높은 가설은 (<code>The</code>, <code>nice</code>)로 확률이 0.5, 그 다음으로 높은 확률을 보이는 가설은 (<code>The</code>, <code>dog</code>)로 확률이 0.4입니다. greedy search에서는 top-1만 선택했기 때문에 아래 가설이 무시되었지만 beam search에서는 <code>num_beams</code>만큼 가설을 유지하기 때문에 두 번째로 높은 확률을 가지는 가설 (<code>The</code>, <code>dog</code>)를 기각하지 않고 유지합니다. (어떻게 유지하는지는 Ch2)</p>
+<p>Time step 2에서 (<code>The</code>, <code>dog</code>, <code>has</code>)는 0.36의 확률을 가지는 가설이고 greedy search의 결과였던 (<code>The</code>, <code>nice</code>, <code>woman</code>)은 0.2의 확률을 가지는 가설입니다. 어때요 확률이 뒤집혔죠?</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Beam search는 항상 greedy search보다 높은 확률로 output sequence를 찾아줍니다. 하지만 가장 가능성이 있는 출력을 찾는 것은 보장되지 않죠. (sub-optimal solution)</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>transformers에서의 예시를 봅시다!</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">beam_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span> 
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> 
+    <span class="n">num_beams</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> 
+    <span class="n">early_stopping</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">beam_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+근육이 커지기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 중요하다.
+콜라겐과 엘라스틴의 생성을 촉진시키기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 중요하다.
+피부 속 콜라겐과 엘라스틴의 생성을 촉진시키기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 중요하다.
+피부 속 콜라겐과 엘라스틴의 생성을 촉진시키기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 중요하다.
+피부 속 콜라겐과 엘라스틴의 생성을 촉진시키기 위해서는 피부 속 콜라겐과 엘라스틴의 생
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>음... 하지만 출력에 여전히 동일한 word sequence의 반복이 포함되는 군요...</p>
+<p>이에 대한 간단한 해결책은 Paulus 연구진이 도입한 <code>n-grams penalty</code>(a.k.a word sequences of n words)를 사용하는 것입니다.</p>
+<ul>
+<li><a href="https://arxiv.org/abs/1705.04304">A Deep Reinforced Model for Abstractive Summarization, Paulus et al. (2017)</a></li>
+<li><a href="https://arxiv.org/abs/1701.02810">OpenNMT: Open-Source Toolkit for Neural Machine Translation, Klein et al. (2017)</a></li>
+</ul>
+<p>가장 흔한 <code>n-grams penalty</code>는 이미 본 n-gram을 생성할 수 있는 다음 단어의 확률을 수동으로 0으로 설정하여 n-gram이 두 번 다시 나타나지 않도록 하는 것입니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><code>no_repeat_ngram_size</code>를 2로 설정하여 동일한 n-gram이 2번 이상 반복되지 않도록 수정해보죠!</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">beam_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span> 
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> 
+    <span class="n">num_beams</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">no_repeat_ngram_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">early_stopping</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">beam_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+근육이 커지기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 가장 중요하다.
+콜라겐은 피부의 탄력을 유지하는 데 중요한 역할을 하기 때문에 피부 노화를 예방하고 탄력 있는 피부로 가꿔주는 것이 중요하다.
+또한 피부 탄력이 떨어지기 쉬운 겨울철에는 보습과 영양을 동시에 챙길 수 있는 제품을 선택하는 것이 좋다.
+겨울철에는 피부가 건조해지기 쉬우므로 충분한 수분을 섭취하는 것이 중요하다. 현대자동차(회장 정몽구)는 지난달 국내 자동차 판매량이 전년 동월 대비 4.2% 감소한 1만2천511대를 기록했다고 1일 밝혔다.
+현대차는 지난해 12월 국내 시장에서
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>반복의 문제는 해결되었군요! (다만 갑분 현대자동차... 저는 다만 근육이 커지는 방법을 알고 싶었습니다만...)</p>
+<p>다만 patricks에 따르면 n-gram penalty는 주의해서 사용해야 합니다. 예를 들어 New York 시에 대해 생성된 기사는 2-gram penalty를 사용하면 전체 텍스트에서 도시 이름이 한 번만 나타나기 때문입니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Beam search의 또 다른 중요한 기능은 생성 후 top beams를 비교하고 목적에 가장 잘 맞는 generated beam을 선택할 수 있다는 점입니다.</p>
+<p>🤗 transformers에서 <code>num_return_sequences</code> 매개변수를 세팅하면 위의 작업을 수행할 수 있습니다.</p>
+<ul>
+<li>
+<code>num_return_sequences</code>는 항상 <code>num_beams</code>보다 작아야 합니다.</li>
+</ul>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">beam_outputs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span> 
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> 
+    <span class="n">num_beams</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">no_repeat_ngram_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">num_return_sequences</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">early_stopping</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="c1"># now we have 3 output sequences</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">beam_output</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">beam_outputs</span><span class="p">):</span>
+    <span class="n">decoded_text</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">beam_output</span><span class="p">,</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">decoded_text</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+0: 근육이 커지기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 가장 중요하다.
+콜라겐은 피부의 탄력을 유지하는 데 중요한 역할을 하기 때문에 피부 노화를 예방하고 탄력 있는 피부로 가꿔주는 것이 중요하다.
+또한 피부 탄력이 떨어지기 쉬운 겨울철에는 보습과 영양을 동시에 챙길 수 있는 제품을 선택하는 것이 좋다.
+겨울철에는 피부가 건조해지기 쉬우므로 충분한 수분을 섭취하는 것이 중요하다. 현대자동차(회장 정몽구)는 지난달 국내 자동차 판매량이 전년 동월 대비 4.2% 감소한 1만2천511대를 기록했다고 1일 밝혔다.
+현대차는 지난해 12월 국내 시장에서
+
+1: 근육이 커지기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 가장 중요하다.
+콜라겐은 피부의 탄력을 유지하는 데 중요한 역할을 하기 때문에 피부 노화를 예방하고 탄력 있는 피부로 가꿔주는 것이 중요하다.
+또한 피부 탄력이 떨어지기 쉬운 겨울철에는 보습과 영양을 동시에 챙길 수 있는 제품을 선택하는 것이 좋다.
+겨울철에는 피부가 건조해지기 쉬우므로 충분한 수분을 섭취하는 것이 중요하다. 현대자동차(회장 정몽구)는 지난달 국내 자동차 판매량이 전년 동월 대비 4.2% 감소한 1만2천567대를 기록했다고 1일 밝혔다.
+현대차는 지난해 12월 국내 시장에서
+
+2: 근육이 커지기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 가장 중요하다.
+콜라겐은 피부의 탄력을 유지하는 데 중요한 역할을 하기 때문에 피부 노화를 예방하고 탄력 있는 피부로 가꿔주는 것이 중요하다.
+또한 피부 탄력이 떨어지기 쉬운 겨울철에는 보습과 영양을 동시에 챙길 수 있는 제품을 선택하는 것이 좋다.
+겨울철에는 피부가 건조해지기 쉬우므로 충분한 수분을 섭취하는 것이 중요하다. 현대자동차(회장 정몽구)는 지난달 국내 자동차 판매량이 전년 동월 대비 4.2% 감소한 1만2천567대를 기록했다고 1일 밝혔다.
+현대차는 지난해 12월 내수 판매
+
+3: 근육이 커지기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 가장 중요하다.
+콜라겐은 피부의 탄력을 유지하는 데 중요한 역할을 하기 때문에 피부 노화를 예방하고 탄력 있는 피부로 가꿔주는 것이 중요하다.
+또한 피부 탄력이 떨어지기 쉬운 겨울철에는 보습과 영양을 동시에 챙길 수 있는 제품을 선택하는 것이 좋다.
+겨울철에는 피부가 건조해지기 쉬우므로 충분한 수분을 섭취하는 것이 중요하다. 현대자동차(회장 정몽구)는 지난달 국내 자동차 판매량이 전년 동월 대비 4.2% 감소한 1만2천511대를 기록했다고 1일 밝혔다.
+현대차는 지난해 12월 국내 판매
+
+4: 근육이 커지기 위해서는 피부 속 콜라겐과 엘라스틴의 생성을 촉진시키는 것이 가장 중요하다.
+콜라겐은 피부의 탄력을 유지하는 데 중요한 역할을 하기 때문에 피부 노화를 예방하고 탄력 있는 피부로 가꿔주는 것이 중요하다.
+또한 피부 탄력이 떨어지기 쉬운 겨울철에는 보습과 영양을 동시에 챙길 수 있는 제품을 선택하는 것이 좋다.
+겨울철에는 피부가 건조해지기 쉬우므로 충분한 수분을 섭취하는 것이 중요하다. 현대자동차(회장 정몽구)는 지난달 국내 자동차 판매량이 전년 동월 대비 4.2% 감소한 1만2천511대를 기록했다고 1일 밝혔다.
+현대차는 지난해 12월 내수 판매
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>음... 반환받았지만 각 beam들이 크게 다르지 않습니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Open-ended generation에서 최근에 beam search가 최선이 아닐 수 있다는 몇 가지 이유가 제기되었습니다.</p>
+<ul>
+<li>Beam search는 기계 번역이나 요약같이 원하는 생성의 길이가 어느 정도 예측 가능한 작업에서 매우 잘 동작합니다. 그러나 원하는 출력의 길이가 크게 달라질 수 있는 open-ended generation의 경우(대화 혹은 story 생성) 그렇지 않습니다.<ul>
+<li><a href="https://arxiv.org/abs/1808.10006">Correcting Length Bias in Neural Machine Translation
+, Murray et al., (2018)</a></li>
+<li><a href="https://arxiv.org/abs/1808.09582">Breaking the Beam Search Curse: A Study of (Re-)Scoring Methods and Stopping Criteria for Neural Machine Translation, Yang et al. (2018)</a></li>
+</ul>
+</li>
+<li>위에서 확인했듯 beam search는 <code>repetitive generation</code>에 취약합니다. 이는 n-gram 혹은 다른 penalty로 적절히 조정하기가 어렵습니다.</li>
+<li>Holtzman에 따르면, High quality human language는 다음 단어가 가장 높게 올 확률 분포를 따르지 않습니다. 즉 인간은 생성된 텍스트가 우리를 놀라게 하고(surprise) 지루하거나(boring) 예측할 수 없기를(not to be predictable) 원합니다. 저자는 BeamSearch로 생성된 text가 덜 놀랍다는 것을 아래 plot으로 보여줍니다.<ul>
+<li><a href="https://arxiv.org/abs/1904.09751">The Curious Case of Neural Text Degeneration, Ari Holtzman et al. (2019)</a></li>
+</ul>
+</li>
+</ul>
+<p><img src="https://blog.fastforwardlabs.com/images/2019/05/Screen_Shot_2019_05_08_at_3_06_36_PM-1557342561886.png" alt="img"></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>자, 지루한 text는 그만 생성하고 randomness를 도입합시다 :)</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Sampling">
+<a class="anchor" href="#Sampling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Sampling<a class="anchor-link" href="#Sampling"> </a>
+</h2>
+<p>가장 기본적인 형태의 sampling은 다음 단어 $w_t$를 conditional probability distribution에 따라 임의로 선택하는 것입니다.</p>
+<p>
+$$w_t\sim P(w|w_{1:t-1})$$
+</p>
+<p>아래 시각화로 sampling 시 언어 생성에 대해 알아봅시다.</p>
+<p><img src="https://huggingface.co/blog/assets/02_how-to-generate/sampling_search.png" alt="img"></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>샘플링을 사용한 언어 생성은 더 이상 결정적이지 않습니다.</p>
+<ul>
+<li>Maximization 기법(greedy, beam)은 가장 높은 확률을 가지는 가설만을 택했습니다.</li>
+</ul>
+<p>단어 <code>car</code>은 beam을 3만큼 늘리지 않으면 이전 maximization 기법에서는 어떠한 경우에도 절대로 채택되지 않습니다. 하지만 정말 낮은 확률로 조건부 확률 분포 $P(w|`the`)$에서 단어 <code>car</code>가 추출될 수 있으며 다음 단어인 <code>drives</code>, <code>is</code>, <code>turns</code>가 조건부 확률 분포 $P(w|`the`,`car)$에서 추출될 것 입니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>🤗 transformers에서 <code>do_sample</code> 옵션을 활성화시키고 top-k sampling을 비활성화시켜서 위를 구현할 수 있습니다.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="k">def</span> <span class="nf">set_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">):</span>
+    <span class="sd">"""Seed fixer (random, numpy, torch)</span>
+<span class="sd">    Args:</span>
+<span class="sd">        seed (:obj:`int`): The seed to set.</span>
+<span class="sd">    """</span>
+    <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed_all</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>  <span class="c1"># if use multi-GPU</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">deterministic</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">benchmark</span> <span class="o">=</span> <span class="kc">False</span>
+    
+<span class="n">set_seed</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sample_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span>
+    <span class="n">do_sample</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+    <span class="n">top_k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">sample_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+근육이 커지기 위해서는 일단 교정에 힘써야 한다.
+여기서 중요한 것은 교정을 잘못하였을 때 그 교정이 잘못 되었는지 한번 말해주면 스스로가 교정되는 것이다.
+교정수술의 가장 큰 원칙은 교정이 어렵다고 하여 하는 것이다.
+심한 경우에는 교정에만 전념하는 것이 최선의 방법이다.
+특히 교정에 시간을 투자하다
+보면 교정수술에 욕심이 생기게 되는 즉이 있다.
+물론 이 방법은 교정이 기계적임을 이용하여 지속적인 교정수술을 하는 방법이지만, 교정을 잘 하면 오히려 기존의 교정수술에 비해 교정력이 더 강해질 수 있다.
+또한 최선의 교정치료를 하면 개선된다.
+즉 교정은 교정이 진행될수록 결국은 개선된다.
+교
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>어... 내용은 차치하고 반복 문제는 안보이네요! 하지만 표현이 이상합니다.</p>
+<ul>
+<li>교정이 어렵다고 하여 하는 것이다.</li>
+<li>특히 교정에 시간을 투자하다</li>
+<li>보면 교정수술에 욕심이 생시게 되는 즉이 있다</li>
+</ul>
+<p>이는 word sequence를 sampling할 때 생기는 큰 문제입니다. 모델은 종종 일관성없이 횡설수설합니다.</p>
+<ul>
+<li><a href="https://arxiv.org/abs/1904.09751">The Curious Case of Neural Text Degeneration, Ari Holtzman et al. (2019)</a></li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>위를 해결할 트릭은 분포 $P(w|w_{1:t-1})$을 sharp하게 만드는 것입니다.</p>
+<ul>
+<li>가장 높은 확률을 가지는 단어의 likelihood를 높이고</li>
+<li>가장 낮은 확률을 가지는 단어의 likelihood를 낮추는 것</li>
+</ul>
+<p>위 트릭은 <a href="https://en.wikipedia.org/wiki/Softmax_function#Smooth_arg_max">softmax</a>의 <code>temperature</code>라고 불립니다.</p>
+<p>temperature를 적용한 예시에 대한 시각화입니다.</p>
+<p><img src="https://huggingface.co/blog/assets/02_how-to-generate/sampling_search_with_temp.png" alt="img"></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>temperature를 적용하기 전에는 $P(w|`the`)$에서 <code>car</code>가 뽑힐 확률이 0.1이었지만 지금은 0.02입니다. 낮아진 만큼 뽑히기는 더 힘들겠죠?</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sample_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span>
+    <span class="n">do_sample</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+    <span class="n">top_k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">sample_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+근육이 커지기 위해서는 칼슘과 마그네슘이 풍부한 음식을 꾸준히 섭취하는 것이 좋다.
+또한 규칙적인 운동, 스트레스 유발과 같은 생활습관 관리에도 신경을 써야 한다.
+한양대병원 가정의학과 양형철 교수는 “지방간 질환을 개선하고 삶의 질을 높이는 데 도움이 되는 비타민D와 칼슘을 많이 섭취하면 간 건강에 도움이 될 수 있다”며 비타민D, 칼슘, 마그네슘이 풍부한 음식을 꾸준히 섭취하는 것이 간 건강에 도움이 된다고 조언했다. 서울시는 오는 10일 오후 5시30분 마포구 서교동 홍익대 인근 선유도공원에서 '플라워 페스티벌-선유도공원을 찾아라' 행사를 개최한다고 9일
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Maximization의 결과와 유사하면서 반복은 안하고 다른 내용까지 추가되었습니다! (물론 근육과는 아직도 관련이 적습니다... 그래도 일관성은 개선되었군요.)</p>
+<p>temperature를 적용하면 분포를 덜 random하게 만들 수 있지만 0으로 설정하면 greedy decoding과 동일해집니다. 그러면 이전과 같은 문제를 다시 겪게 되겠지요.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Top-K-Sampling">
+<a class="anchor" href="#Top-K-Sampling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Top-K Sampling<a class="anchor-link" href="#Top-K-Sampling"> </a>
+</h2>
+<p>Fan 연구진은 아주 간단하지만 강력한 sampling scheme인 <strong>Top-K</strong>를 소개했습니다.</p>
+<ul>
+<li><a href="https://arxiv.org/pdf/1805.04833.pdf">Hierarchical Neural Story Generation, Fan et. al (2018)</a></li>
+</ul>
+<p>Top-K sampling에서 가장 가능성이 높은 K개의 다음 단어는 filtering되고 probability mass는 K개의 다음 단어에 대해서만 재분배됩니다. GPT2가 이 sampling scheme를 택했고 story generation에서 성공적이었던 원인 중 하나로 평가됩니다.</p>
+<ul>
+<li>전체 단어 분포에서 샘플링하는 것이 아니라 고정된 상위 K개의 단어에서 sampling 수행</li>
+</ul>
+<p><img src="https://huggingface.co/blog/assets/02_how-to-generate/top_k_sampling.png" alt="img"></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Time step 1에서 Top-6개를 제외한 나머지 <code>people</code>, <code>big</code>, <code>house</code>, <code>cat</code>은 생성 대상에서 제거합니다. (Top-K개만 filtering, Vocab에 pick-up)</p>
+<p>Step 1에서는 전체의 2/3, step 2에서는 거의 모든 probability mass를 포함합니다.</p>
+<p>Time step 2에서 Top-6개를 제외한 나머지 <code>not</code>, <code>the</code>, <code>small</code>, <code>told</code> 이상한 단어들을 성공적으로 제외하고 추출하는 것을 확인할 수 있습니다.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sample_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span>
+    <span class="n">do_sample</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+    <span class="n">top_k</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">sample_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+근육이 커지기 위해서는 성장호르몬이 많이 분비돼야 하는데, 반대로 성장세포 주사를 맞고 자라기 위해서는 부족한 영양소가 필요하게 된다.
+성장호르몬이 부족하면 혈액의 원활한 흐름을 돕는 비타민A가 풍부해지지만, 성장세포가 부족하면 혈액의 흐름이 원활하지 않게 돼 영양공급이 제대로 이뤄지질 못한다는 것은 매우 치명적이다.
+성인이라면 보통 10~15% 정도 성장이 잘 되지만, 20, 30대 중년 남성들과 고연령층의 경우, 40, 50대 중년 여성들보다 더 큰 성장이 필요하다.
+이뿐 아니라 성호르몬 수치는 더 빨리 감소하는 경향이 있다는 연구결과도 있다.
+연구팀들은 호르몬이 부족하면 혈액 공급이 부족하고, 혈액 내
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>제일 괜찮은 결과인 것 같습니다! 가장 인간같이 생성된 것 같군요. Top-K sampling의 한 가지 문제는 next word distribution $P(w|w_{1:t-1})$에서 filtering되는 단어의 수를 dynamic하게 적용하지 않는 다는 점입니다.</p>
+<ul>
+<li>고정된 K를 사용하기에 문제</li>
+</ul>
+<p>위 그래프에서 오른쪽의 경우 매우 sharp한 분포에서 sampling되지만 왼쪽의 경우에는 더 flat한 분포에서 sampling되기에 문제가 될 수 있습니다.</p>
+<p>Step 1에서 Top-K는 <code>people</code>, <code>big</code>, <code>house</code>, <code>cat</code> 와 같은 가능성있는 후보군들을 제외했습니다. 반대로 Step 2에서는 단어의 sample pool(In top-k)에 부적합한 단어 <code>down</code>, <code>a</code>를 포함합니다. 때문에 sample pool은 고정된 크기 K로 제한하는 것은 모델이 sharp distribution에 대해 횡설수설(gibberish)할 위험이 있고 flat distribution에 대해 창의성(creativity)이 제한될 수 있습니다.</p>
+<p>위 직관이 Ari Holtzman 연구진들이 제안한 <strong>Top-p</strong> 혹은 <strong>nucleus</strong> sampling으로 이어집니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Top-p-(nucleus)-Sampling">
+<a class="anchor" href="#Top-p-(nucleus)-Sampling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Top-p (nucleus) Sampling<a class="anchor-link" href="#Top-p-(nucleus)-Sampling"> </a>
+</h2>
+<p>가장 높은 K개의 단어를 선택하는 대신 <strong>Top-P</strong> sampling은 누적 확률이 확률 p를 초과하는 가능한 가장 작은 단어 집합에서 선택합니다. 그런 다음 probability mass는 이 단어 set 사이에 재분배됩니다. 이런 식으로 단어 집합의 크기(a.k.a the number of words in the set)은 다음 단어의 확률 분포에 따라 동적으로 증가하거나 감소할 수 있습니다.</p>
+<p>위를 시각화해봅시다!</p>
+<p><img src="https://huggingface.co/blog/assets/02_how-to-generate/top_p_sampling.png" alt="img"></p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>$p=0.92$로 설정하겠습니다. Top-p sampling은 probability mass의 92%를 초과하는 단어의 minimum number를 계산합니다. 이를테면 위에서 <code>cat</code>을 제외한 단어의 prob mass의 합은 0.94로 설정한 p보다 커지게 됩니다. 즉 time step 1에서는 9개의 단어를 고르고 time step 2에서는 <code>drives</code>, <code>is</code>, <code>turns</code> 만으로도 97%입니다. 때문에 3개의 단어로 고정 후 sampling을 수행합니다. Top-K에서 고정적인 K로 sampling한 것과 다르게 Top-p에서는 next word distribution에 따라 dynamic하게 sampling pool을 결정할 수 있습니다.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sample_output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span>
+    <span class="n">do_sample</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+    <span class="n">top_p</span><span class="o">=</span><span class="mf">0.92</span><span class="p">,</span>
+    <span class="n">top_k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">sample_output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+근육이 커지기 위해서는 물 속에 오래 있다가 맥주를 삼키는 것이 도움이 된다.
+몸이 차가워지면 아드레날린이 분비되어 농도가 높아지므로, 몸에 쌓인 아드레날린 분비를 조절해야 한다.
+따라서 8000mg에서 90mg 정도 먹는 것이 바람직하다.
+박 교수는 “최근 유행하는 프리바이오틱스는 장내 미생물의 증식 등 고유의 특성을 갖고 있다. 그러나 장에도 많은 종류의 유산균이 증식하기 때문에 다양하긴 하지만 장에 유익한 균이 많이 생성되지 않는 편”이라고 밝혔다.
+정답은 ‘공부 비법’이다.
+공부에 빠진 아이들의 세포막을 현미경으로 들여다본다.
+아기처럼 희고 건강한 베개를 만든
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>좋습니다! 맨 처음 sampling했을 결과보다는 훨씬 더 사람다워 졌습니다. (내용은...)</p>
+<p>이론적으로 Top-p는 Top-k보다 더 우아해보이지만 실제로는 두 방법 모두 잘 동작하고 Top-p는 Top-k와 함께 사용할 수 있습니다. Top-K는 매우 낮은 순위의 단어를 피하면서 일부 동적 선택을 허용할 수 있습니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>마지막으로 독립적으로 샘플링된 여러 출력을 얻기 위해 매개변수 <code>num_return_sequences</code>를 1보다 크게 다시 설정할 수 있습니다.</p>
+
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sample_outputs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">input_ids</span><span class="p">,</span>
+    <span class="n">do_sample</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+    <span class="n">top_p</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
+    <span class="n">top_k</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">num_return_sequences</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Output:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="mi">100</span> <span class="o">*</span> <span class="s1">'-'</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sample_output</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sample_outputs</span><span class="p">):</span>
+    <span class="n">decoded_text</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">sample_output</span><span class="p">,</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">decoded_text</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Output:
+----------------------------------------------------------------------------------------------------
+0: 근육이 커지기 위해서는 비타민 C가 매우 중요한데, 이 비타민C가 뇌를 건강하게 만드는 데 필요한 핵심 영양소가 되기 때문이다.
+또한 아연이 많이 함유된 음식을 섭취할 경우 심장병이 위험할 수 있으므로, 음식을 씹는 횟수를 줄이도록 하고 비타민 C가 많이 함유된 식품을 꾸준히 섭취하는 것이 좋다.
+또한 비타민 C를 많이 함유한 식품은 스트레스를 해소하고 다이어트에도 도움이 되며, 뇌졸중을 예방하는 효과도 기대할 수 있다.
+이런 이유로 최근에는 ‘건강한 우리 몸’에서 탄수화물과 지방, 단백질과 비타민을 조합하는 발효식품이 관심을 받고 있다.
+당근과 생강은 혈중 비타민을 보충해 심혈관계에 도움을
+
+1: 근육이 커지기 위해서는 먼저 몸에 무리가 가지 않도록 하는 것이 중요하다. LG전자의 새로운 디자인 콘셉트인 '매직스페이스'는 혁신적인 디자인을 넘어 제품 성능이 업그레이드 된 것을 의미한다.
+LG전자는 올해 선보인 올레드 TV의 '프리미엄' 콘셉트인 '매직스페이스'를 통해 LG만의 '3세대'(4K) OLED(유기발광다이오드), '스마트 OLED(유기발광다이오드)' 등으로 확대해 프리미엄 라인업의 경쟁력을 강화해 나간다는 방침이다.
+LG전자는 특히 OLED의 경우
+
+2: 근육이 커지기 위해서는 우선 피부 자체의 균형이 중요하다.
+특히 건조한 피부의 경우 수분 공급에 대한 적절한 관리만이 피부 톤을 건강하게 되찾아 주는 최선의 방법이다.
+더페이스샵의 ‘더페이스샵 수분 크림’은 수분크림으로 사용 시 수분이 더욱 강하게 흡수돼 피부 본연의 피부 보습에 도움을 줄 수 있다.
+특히 피부의 수분함유량에 따라서 다양한 제품이 개발되며 수분크림을 바른 후 피부톤까지 환하게 밝혀주고 있다.
+바디 전용 앰플 타입의 고보습 수분크림은 자외선차단 기능이 있어 여름철 야외활동이 많은 환절기에 적합하다.
+특히 여름철 민감피부에는 바르는 즉시 피부에 보습막을 형성해 주는
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Conclusion">
+<a class="anchor" href="#Conclusion" aria-hidden="true"><span class="octicon octicon-link"></span></a>Conclusion<a class="anchor-link" href="#Conclusion"> </a>
+</h2>
+<ul>
+<li>top-p, top-k sampling은 open-ended language generation에서 기존의 greedy-and beam search보다 더 유창한 text를 생성하는 것으로 보임</li>
+<li>최근에 greedy 및 beam search의 명백한 경함(주로 반복적인 word sequence 생성)이 decoding methodology보다는 model(특히 모델이 훈련되는 방식)에 의해 발생한다는 증거가 더 많이 있음.<ul>
+<li><a href="https://arxiv.org/pdf/1908.04319.pdf">Neural Text Degeneration with Unlikelihood Training, Welleck et al., (2019)</a></li>
+</ul>
+</li>
+<li>또한 top-k 및 top-p sampling도 repetitive word sequence 생성에서 자유롭진 못하는 것으로 보임<ul>
+<li><a href="https://arxiv.org/abs/2002.02492">Consistency of a Recurrent Language Model With Respect to Incomplete Decoding, Welleck et al., (2020)</a></li>
+</ul>
+</li>
+<li>Welleck의 2019 연구에 의하면 저자는 사람의 평가에 따르면 모델의 훈련 목표를 조정할 때 Beam search가 Top-p sampling보다 더 유창한 text를 생성할 수 있음을 보임</li>
+<li>Open-ended language generation은 빠르게 발전하는 분야이며 여기에 모든 경우에 적용할 수 있는 방법이 없는 경우가 많음. 때문에 특정 사용 사례에 가장 적합한 방법이 무엇인지를 확인해야 한다.</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Appendix">
+<a class="anchor" href="#Appendix" aria-hidden="true"><span class="octicon octicon-link"></span></a>Appendix<a class="anchor-link" href="#Appendix"> </a>
+</h2>
+<p>위에서 언급하지 않은 생성 메소드에 대한 몇 가지 추가 매개변수 소개</p>
+<ul>
+<li>
+<code>min_length</code>: min_lenght에 도달하기 전에 모델이 EOS token을 생성하지 않도록 강제하는 데 사용할 수 있음<ul>
+<li>요약에서 매우 자주 사용되지만 사용자가 더 긴 출력을 원할 경우 일반적으로 유용할 수 있음</li>
+</ul>
+</li>
+<li>
+<code>repeat_penalty</code>: 이미 생성되었거나 context에 속하는 단어에 penalty를 적용하는데 사용. Keskar et al., (2019)에 의해 처음으로 소개되었으며 Welleck et al., (2019)의 training objective로도 사용됨. 반복을 방지하는데 매우 효과적일 수 있지만 다양한 모델 및 사용 사례에 매우 민감한 것으로 보임. 해당 <a href="https://github.com/huggingface/transformers/pull/2303">디스커션</a> 참고.<ul>
+<li><a href="https://arxiv.org/abs/1909.05858">CTRL: A Conditional Transformer Language Model for Controllable Generation, Keskar et al., (2019)</a></li>
+<li><a href="https://arxiv.org/pdf/1908.04319.pdf">Neural Text Degeneration with Unlikelihood Training, Welleck et al., (2019)</a></li>
+</ul>
+</li>
+<li>
+<code>attention_mask</code>: padded token을 mask하는데 사용</li>
+<li>
+<code>pad_token_id</code>, <code>bos_token_id</code>, <code>eos_token_id</code>: 모델에 기본적으로 해당 토큰이 없는 경우 사용자는 다른 token id를 수동으로 선택하여 나타낼 수 있음.</li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="GenerationMixin-뜯어보기">
+<a class="anchor" href="#GenerationMixin-%EB%9C%AF%EC%96%B4%EB%B3%B4%EA%B8%B0" aria-hidden="true"><span class="octicon octicon-link"></span></a>GenerationMixin 뜯어보기<a class="anchor-link" href="#GenerationMixin-%EB%9C%AF%EC%96%B4%EB%B3%B4%EA%B8%B0"> </a>
+</h1>
+</div>
+</div>
+</div>
+</div>
+
+
+
+  </div><!-- from https://github.com/utterance/utterances -->
+<script src="https://utteranc.es/client.js"
+        repo="jinmang2/jinmang2.github.io"
+        issue-term="title"
+        label="blogpost-comment"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script><a class="u-url" href="/%F0%9F%A4%97%20huggingface/nlp/2022/02/07/how-to-generate.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>Subscribe</span>
+          </a>
+        </p>
+      </div>
+      <div class="footer-col">
+        <p>An easy to use blogging platform with support for Jupyter Notebooks.</p>
+      </div>
+    </div>
+
+    <div class="social-links"><ul class="social-media-list"><li><a rel="me" href="https://github.com/jinmang2" target="_blank" title="jinmang2"><svg class="svg-icon grey"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg></a></li></ul>
+</div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -112,7 +112,7 @@ window.onload = wrap_img;
        • <span class="read-time" title="Estimated read time">
     
     
-      1 min read
+      3 min read
     
 </span></p>
 
@@ -132,6 +132,15 @@ window.onload = wrap_img;
 <li class="toc-entry toc-h1"><a href="#revnet">RevNet</a>
 <ul>
 <li class="toc-entry toc-h2"><a href="#abstract">Abstract</a></li>
+<li class="toc-entry toc-h2"><a href="#introduction">Introduction</a></li>
+<li class="toc-entry toc-h2"><a href="#background">Background</a>
+<ul>
+<li class="toc-entry toc-h3"><a href="#backpropagation">Backpropagation</a></li>
+<li class="toc-entry toc-h3"><a href="#deep-residual-networks">Deep Residual Networks</a></li>
+<li class="toc-entry toc-h3"><a href="#reversible-architectures">Reversible Architectures</a></li>
+</ul>
+</li>
+<li class="toc-entry toc-h2"><a href="#jacobian이-unit-determinant를-가지는-이유-just-add">Jacobian이 unit determinant를 가지는 이유? just add!</a></li>
 </ul>
 </li>
 </ul><!-- # RevNet: Backpropagation Without Storing Activations -->
@@ -152,9 +161,191 @@ window.onload = wrap_img;
       <li>역전파 시 gradient 계산을 위해서 필요하다고 한다.</li>
     </ul>
   </li>
+  <li>위 문제를 개선한 ResNet의 variant인 <code class="language-plaintext highlighter-rouge">RevNet</code>을 소개
+    <ul>
+      <li>각 layer의 activation (output)들을 다음 layer의 activation으로 reconstruct 가능</li>
+      <li>때문에 역전파 동안에 모든 layer의 activation을 저장할 필요가 없게 된다.</li>
+    </ul>
+  </li>
+  <li>RevNet을 CIFAR-10, CIFAR-100, ImageNet에서 실험
+    <ul>
+      <li>동일한 accuracy</li>
+      <li>depth와 무관한 activation storage 요구</li>
+    </ul>
+  </li>
 </ul>
 
-<p>$y1=x1+F(x2)$</p>
+<h2 id="introduction">
+<a class="anchor" href="#introduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Introduction</h2>
+<ul>
+  <li>Residual connection: key architecture innovation
+    <ul>
+      <li>더 깊게 쌓아도 gradient vanishing/exploding없이 information이 쭉 전달될 수 있게 만들어 줌</li>
+    </ul>
+  </li>
+  <li>최근 거의 모든 신경망은 Backpropagation으로 학습됨</li>
+  <li>backpropagation 과정 중 network의 activation을 메모리에 저장함
+    <ul>
+      <li>아래 코드는 Matrix Multiplication을 torch autograd 모듈로 작성한 코N</li>
+    </ul>
+
+    <div class="language-python highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code>  <span class="k">class</span> <span class="nc">Matmul</span><span class="p">(</span><span class="n">torch</span><span class="p">.</span><span class="n">autograd</span><span class="p">.</span><span class="n">Function</span><span class="p">):</span>
+
+      <span class="o">@</span><span class="nb">staticmethod</span>
+      <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">W</span><span class="p">):</span>
+          <span class="n">ctx</span><span class="p">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span> <span class="c1"># backward 연산을 위해 값을 저장
+</span>          <span class="k">return</span> <span class="n">x</span> <span class="o">@</span> <span class="n">W</span>
+
+      <span class="o">@</span><span class="nb">staticmethod</span>
+      <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_outputs</span><span class="p">):</span>
+          <span class="n">x</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="o">=</span> <span class="n">ctx</span><span class="p">.</span><span class="n">saved_tensors</span> <span class="c1"># 미분 연산에 사용될 값 호출
+</span>          <span class="k">return</span> <span class="n">grad_outputs</span> <span class="o">@</span> <span class="n">W</span><span class="p">.</span><span class="n">T</span><span class="p">,</span> <span class="n">x</span><span class="p">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">grad_outputs</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Neural Network는 깊게 쌓을수록 성능이 향상된다고 이미 보고된 바가 있고 ResNet 또한 정보가 backward 과정에서 잘 흐를 수 있도록 residual connection을 붙인 것</li>
+  <li>ResNet은 information flow를 개선한 것이지 backward 연산의 bottleneck을 해결한 것이 아님</li>
+  <li>GPU 자원은 한정되어 있음</li>
+  <li>이러한 연유로 Large model을 학습시킬 때 multiple GPU 환경에서 Parallelism이 필수지만 이는 비싸고 구현하기 복잡함</li>
+  <li>따라서 본 논문에서 <code class="language-plaintext highlighter-rouge">RevNet</code>을 제안함
+    <ul>
+      <li>A variant of ResNets which is reversible in the sense that each layer’s activations can be computed from the next layer’s activations</li>
+      <li>위 문장이 핵심이라고 생각함. 각 layer의 activation이 다음 layer의 activation으로 계산이 가능하다는 말(reversible)</li>
+      <li>잘 이해가 안되면 3장의 수식 부분을 읽는 것이 빠름</li>
+    </ul>
+  </li>
+  <li>신기하게 이러한 구조를 사용했을 때 성능 하락이 발생하지 않았다고 보고함
+    <ul>
+      <li>Surprisingly, constraining the architecture to be reversible incurs no noticeable loss in performance</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="background">
+<a class="anchor" href="#background" aria-hidden="true"><span class="octicon octicon-link"></span></a>Background</h2>
+
+<h3 id="backpropagation">
+<a class="anchor" href="#backpropagation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Backpropagation</h3>
+<ul>
+  <li>$\theta=\theta-\alpha\nabla_\theta f_\theta$</li>
+  <li>핵심은 <code class="language-plaintext highlighter-rouge">chain rule</code>
+</li>
+  <li>torch, tensorflow, theano에선 automatic differentiation 모듈로 구현이 되어있음</li>
+  <li>RevNet의 memory savings은 위 모듈의 도움을 받는 것이 아니라(?) backprop computation 부분을 직접 구현함
+    <ul>
+      <li>공식 repo에서는 tensorflow 구현을 수행 (<code class="language-plaintext highlighter-rouge">tf.gradients</code>를 사용해서)</li>
+      <li>본 논문 리뷰에서는 lucidrains님의 torch 구현체를 사용할 예정 (<code class="language-plaintext highlighter-rouge">torch.autograd.Function</code>)</li>
+    </ul>
+  </li>
+  <li>Let $v_1,\dots,v_k$ be topological ordering of the nodes in the network’s computation graph $\mathcal{G}$, where $v_k$ denotes the cost function $\mathcal{C}$
+    <ul>
+      <li>neural net을 topological graph로 보고 각 node를 $v_i$로 두자는 얘기</li>
+      <li>마지막 노드는 loss를 계산하는 부분일 테니 $v_k$는 cost function이 될 것</li>
+    </ul>
+  </li>
+  <li>각 노드는 parents 노드의 함수 $f_i$에 의해 정의됨</li>
+  <li>Backprop이 원하는 것? total derivative $\frac{d\mathcal{C}}{dv_i}$를 계산하는 것!
+    <ul>
+      <li>total derivative는 계산 그래프에서 $v_k$의 자손을 통한 간접 효과를 고려하여 $v_i$에 대한 극미한 변화가 $\mathcal{C}$에 미치는 영향을 측정</li>
+      <li>
+<code class="language-plaintext highlighter-rouge">[Note that]</code> total derivative $\frac{d\mathcal{C}}{dv_i}$와 partial derivative $\frac{\partial f}{\partial x_i}$는 다르다는 것을 명심
+        <ul>
+          <li>partial derivative $\frac{\partial f}{\partial x_i}$는 다른 argument들에 대해 $x_i$가 바뀌는 영향을 고려하지 않는다.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Let $\bar{v_i}=\frac{d\mathcal{C}}{dv_i}$ be total derivative</li>
+  <li>Backprop은 topological order의 역순으로 계산 그래프의 node들을 돈다</li>
+  <li>
+    <p>각 노드 $v_i$에 대해 아래의 식을 활용하여 total derivative를 계산한다.</p>
+
+    <span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mover accent="true"><msub><mi>v</mi><mi>i</mi></msub><mo>ˉ</mo></mover><mo>=</mo><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><mtext>Child</mtext><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></munder><mo fence="false" stretchy="true" minsize="2.4em" maxsize="2.4em">(</mo><mfrac><mrow><mi mathvariant="normal">∂</mi><msub><mi>f</mi><mi>j</mi></msub></mrow><mrow><mi mathvariant="normal">∂</mi><msub><mi>v</mi><mi>i</mi></msub></mrow></mfrac><msup><mo fence="false" stretchy="true" minsize="2.4em" maxsize="2.4em">)</mo><mi mathvariant="normal">⊤</mi></msup><mover accent="true"><msub><mi>v</mi><mi>j</mi></msub><mo>ˉ</mo></mover></mrow><annotation encoding="application/x-tex">\bar{v_i}=\sum_{j\in \text{Child}(i)}\bigg(\cfrac{\partial f_j}{\partial v_i}\bigg)^\top \bar{v_j}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.71778em;vertical-align:-0.15em;"></span><span class="mord accent"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.25em;"><span class="mord">ˉ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:3.205013em;vertical-align:-1.516005em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.050005em;"><span style="top:-1.808995em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span><span class="mrel mtight">∈</span><span class="mord text mtight"><span class="mord mtight">Child</span></span><span class="mopen mtight">(</span><span class="mord mathnormal mtight">i</span><span class="mclose mtight">)</span></span></span></span><span style="top:-3.0500049999999996em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.516005em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="delimsizing size3">(</span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.5899999999999999em;"><span style="top:-2.3139999999999996em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.05556em;">∂</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.74em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord" style="margin-right:0.05556em;">∂</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.10764em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8360000000000001em;"><span></span></span></span></span></span><span></span></span><span class="mord"><span class="mord"><span class="delimsizing size3">)</span></span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:1.689008em;"><span style="top:-3.9029000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">⊤</span></span></span></span></span></span></span></span><span class="mord accent"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.25em;"><span class="mord">ˉ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span>
+
+    <ul>
+      <li>where $\text{Child}(i)$는 $\mathcal{G}$의 node $v_i$의 child이고 $\cfrac{\partial f_j}{\partial v_i}$는 Jacobian matrix</li>
+      <li>chain rule을 써놓은 식이다.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="deep-residual-networks">
+<a class="anchor" href="#deep-residual-networks" aria-hidden="true"><span class="octicon octicon-link"></span></a>Deep Residual Networks</h3>
+<ul>
+  <li>Deep networks는 수많은 nonlinear function들로 구성된 합성함수(composition function)</li>
+  <li>때문에 각기 다른 layer별 종속성은 많이 복잡함
+    <ul>
+      <li>이는 gradient computation을 불안정하게 만듦</li>
+    </ul>
+  </li>
+  <li>더 깊게 쌓으려면 이를 해결해야할 필요성이 있었음
+    <ul>
+      <li>Highway networks에서 skip connection을 소개하여 이 문제를 피했고
+        <ul>
+          <li>더 정확히는 이 논문은 LSTM에서 영감을 받음</li>
+        </ul>
+      </li>
+      <li>ResNet은 functional form을 사용하여 computations stable을 유지하며 information flow를 개선!
+<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mi>x</mi><mo>+</mo><mi mathvariant="script">F</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">y=x+\mathcal{F}(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.66666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathcal" style="margin-right:0.09931em;">F</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span>
+</li>
+      <li>여기서 $\mathcal{F}$는 shallow neural network로 self-attention 모듈 등이 될 수 있음</li>
+    </ul>
+  </li>
+  <li>ResNet은 exploding, vanishing gradient 문제에 강건함</li>
+  <li>He 연구진은 두 residual block을 사용했다고 함
+    <ul>
+      <li>basic residual function
+  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mi>a</mi><mi>s</mi><mi>i</mi><mi>c</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>c</mi><mn>3</mn></msub><mo stretchy="false">(</mo><msub><mi>c</mi><mn>3</mn></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Basic(x)=c_3(c_3(x))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span><span class="mord mathnormal">a</span><span class="mord mathnormal">s</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span></span>
+</li>
+      <li>bottleneck residual function
+  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mi>o</mi><mi>t</mi><mi>t</mi><mi>l</mi><mi>e</mi><mi>n</mi><mi>e</mi><mi>c</mi><mi>k</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false">(</mo><msub><mi>c</mi><mn>3</mn></msub><mo stretchy="false">(</mo><msub><mi>c</mi><mn>1</mn></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Bottleneck(x)=c_1(c_3(c_1(x)))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.01968em;">ttl</span><span class="mord mathnormal">e</span><span class="mord mathnormal">n</span><span class="mord mathnormal">ec</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)))</span></span></span></span>
+</li>
+      <li>where
+  <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable rowspacing="0.2500em" columnalign="right" columnspacing=""><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>a</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>R</mi><mi>e</mi><mi>L</mi><mi>U</mi><mo stretchy="false">(</mo><mi>B</mi><mi>N</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>a</mi><msub><mi>c</mi><mi>k</mi></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>C</mi><mi>o</mi><mi>n</mi><msub><mi>v</mi><mrow><mi>k</mi><mo>×</mo><mi>k</mi></mrow></msub><mo stretchy="false">(</mo><mi>a</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}\\
+  a(x)=ReLU(BN(x))\\
+  ac_k(x)=Conv_{k\times k}(a(x))
+  \end{aligned}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:4.500000000000002em;vertical-align:-2.000000000000001em;"></span><span class="mord"><span class="mtable"><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.5000000000000004em;"><span style="top:-4.66em;"><span class="pstrut" style="height:3em;"></span><span class="mord"></span></span><span style="top:-3.16em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.10903em;">LU</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.10903em;">BN</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span><span style="top:-1.6599999999999993em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.33610799999999996em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361079999999999em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mbin mtight">×</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">a</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.000000000000001em;"><span></span></span></span></span></span></span></span></span></span></span>
+</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="reversible-architectures">
+<a class="anchor" href="#reversible-architectures" aria-hidden="true"><span class="octicon octicon-link"></span></a>Reversible Architectures</h3>
+<ul>
+  <li>본 논문의 동기와는 다르지만 reversible neural net architecture들에 대해 몇몇 paper들이 있다고 함</li>
+  <li>RevNet은 그 중 NICE라 불리는 nonlinear independent components estimation에 영감을 받아 탄생했다고 언급됨
+    <ul>
+      <li>NICE: an approach to unsupervised generative modeling</li>
+      <li>https://deepseow.tistory.com/45</li>
+      <li>https://deepakbaby.in/post/nice-keras/</li>
+    </ul>
+  </li>
+  <li>NICE는 data space와 latent space 사이의 non-linear bijective transformation를 학습
+    <ul>
+      <li>비선형 1-1 corresponding mapping을 학습</li>
+      <li>양방향으로 복원되고 + 비선형</li>
+      <li>RevNet의 아이디어와 유사함</li>
+    </ul>
+  </li>
+</ul>
+
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.2500em" columnalign="right left" columnspacing="0em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><msub><mi>y</mi><mn>1</mn></msub></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><msub><mi>x</mi><mn>1</mn></msub></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><msub><mi>y</mi><mn>2</mn></msub></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><msub><mi>x</mi><mn>2</mn></msub><mo>+</mo><mi mathvariant="script">F</mi><mo stretchy="false">(</mo><msub><mi>x</mi><mn>1</mn></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}\\
+y_1&amp;=x_1\\
+y_2&amp;=x_2+\mathcal{F}(x_1)
+\end{aligned}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:4.500000000000002em;vertical-align:-2.000000000000001em;"></span><span class="mord"><span class="mtable"><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.5000000000000004em;"><span style="top:-4.66em;"><span class="pstrut" style="height:3em;"></span><span class="mord"></span></span><span style="top:-3.16em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-1.6599999999999993em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.000000000000001em;"><span></span></span></span></span></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0000000000000002em;"><span style="top:-3.16em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span><span style="top:-1.6599999999999993em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathcal" style="margin-right:0.09931em;">F</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.000000000000001em;"><span></span></span></span></span></span></span></span></span></span></span></span>
+
+<ul>
+  <li>모델이 invertible하고 Jacobian이 unit determinant를 가지기 때문에 log-likelihood와 gradient 계산이 다루기 쉬움
+    <ul>
+      <li>Invertible? $x_1=y_1$, $x_2=y_2-\mathcal{F}(y_1)$</li>
+      <li>
+        <h2 id="jacobian이-unit-determinant를-가지는-이유-just-add">
+<a class="anchor" href="#jacobian%EC%9D%B4-unit-determinant%EB%A5%BC-%EA%B0%80%EC%A7%80%EB%8A%94-%EC%9D%B4%EC%9C%A0-just-add" aria-hidden="true"><span class="octicon octicon-link"></span></a>Jacobian이 unit determinant를 가지는 이유? just add!</h2>
+      </li>
+    </ul>
+  </li>
+</ul>
 
 <!-- $$
 \begin{aligned}\\
