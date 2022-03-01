@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="twitter:card" content="summary_large_image" /><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Computing Neural Network Gradients | jinmang2’s Tech blog</title>
+<meta name="generator" content="Jekyll v4.1.1" />
+<meta property="og:title" content="Computing Neural Network Gradients" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="CS224n lecture 5 material" />
+<meta property="og:description" content="CS224n lecture 5 material" />
+<link rel="canonical" href="https://jinmang2.github.io/fundamental/cs231n/2022/03/02/computing-neural-network-gradients.html" />
+<meta property="og:url" content="https://jinmang2.github.io/fundamental/cs231n/2022/03/02/computing-neural-network-gradients.html" />
+<meta property="og:site_name" content="jinmang2’s Tech blog" />
+<meta property="og:image" content="https://jinmang2.github.io/images/computing_nn_gradients.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-03-02T00:00:00-06:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://jinmang2.github.io/images/computing_nn_gradients.png" />
+<meta property="twitter:title" content="Computing Neural Network Gradients" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-03-02T00:00:00-06:00","datePublished":"2022-03-02T00:00:00-06:00","description":"CS224n lecture 5 material","headline":"Computing Neural Network Gradients","image":"https://jinmang2.github.io/images/computing_nn_gradients.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://jinmang2.github.io/fundamental/cs231n/2022/03/02/computing-neural-network-gradients.html"},"url":"https://jinmang2.github.io/fundamental/cs231n/2022/03/02/computing-neural-network-gradients.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="https://jinmang2.github.io/feed.xml" title="jinmang2's Tech blog" /><!-- the google_analytics_id gets auto inserted from the config file -->
+
+
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-163863775-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-163863775-1');
+</script>
+
+
+<link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Primer/15.2.0/primer.css" integrity="sha512-xTz2ys4coGAOz8vuV1NcQBkgVmKhsSEtjbqyMJbBHRplFuvKIUo6xhLHpAyPt9mfR6twHJgn9OgVLuqOvjeBhg==" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" integrity="sha512-1PKOgIY59xJ8Co8+NE6FZ+LOAZKjy+KY8iq0G4B3CyeY6wYHN3yt9PW0XpSriVlkMXe40PTKnXrLnZ9+fkDaog==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/katex.min.css" integrity="sha512-h7nl+xz8wgDlNM4NqKEM4F1NkIRS17M9+uJwIGwuo8vGqIl4BhuCKdxjWEINm+xyrUjNCnK5dCrhM0sj+wTIXw==" crossorigin="anonymous" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/katex.min.js" integrity="sha512-/CMIhXiDA3m2c9kzRyd97MTb3MC6OVnx4TElQ7fkkoRghwDf6gi41gaT1PwF270W6+J60uTmwgeRpNpJdRV6sg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.12.0/contrib/auto-render.min.js" integrity="sha512-Do7uJAaHZm5OLrIv/yN4w0iG1dbu01kzdMNnFfu/mAqgUk6Nniv2JYHcwH+cNwjqgLcqcuBBk+JRvprLVI8azg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha512-0doc9hKxR3PYwso42RD1p5ySZpzzuDiOwMrdCEh2WdJZCjcmFKc/wEnL+z8fBQrnHoiNWbo+3fiGkOYXBdQp4A==" crossorigin="anonymous"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement( document.body, {
+        delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "[%", right: "%]", display: true},
+            {left: "$", right: "$", display: false}
+        ]}
+        );
+    });
+    </script>
+
+
+<script>
+function wrap_img(fn) {
+    if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
+        var elements = document.querySelectorAll(".post img");
+        Array.prototype.forEach.call(elements, function(el, i) {
+            if (el.getAttribute("title") && (el.className != "emoji")) {
+                const caption = document.createElement('figcaption');
+                var node = document.createTextNode(el.getAttribute("title"));
+                caption.appendChild(node);
+                const wrapper = document.createElement('figure');
+                wrapper.className = 'image';
+                el.parentNode.insertBefore(wrapper, el);
+                el.parentNode.removeChild(el);
+                wrapper.appendChild(el);
+                wrapper.appendChild(caption);
+            }
+        });
+    } else { document.addEventListener('DOMContentLoaded', fn); }
+}
+window.onload = wrap_img;
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+    // add link icon to anchor tags
+    var elem = document.querySelectorAll(".anchor-link")
+    elem.forEach(e => (e.innerHTML = '<i class="fas fa-link fa-xs"></i>'));
+    });
+</script>
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">jinmang2&#39;s Tech blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About Me</a><a class="page-link" href="/search/">Search</a><a class="page-link" href="/categories/">Tags</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Computing Neural Network Gradients</h1><p class="page-description">CS224n lecture 5 material</p><p class="post-meta post-meta-title"><time class="dt-published" datetime="2022-03-02T00:00:00-06:00" itemprop="datePublished">
+        Mar 2, 2022
+      </time>
+       • <span class="read-time" title="Estimated read time">
+    
+    
+      5 min read
+    
+</span></p>
+
+    
+      <p class="category-tags"><i class="fas fa-tags category-tags-icon"></i></i> 
+      
+        <a class="category-tags-link" href="/categories/#Fundamental">Fundamental</a>
+        &nbsp;
+      
+        <a class="category-tags-link" href="/categories/#cs231n">cs231n</a>
+        
+      
+      </p>
+    
+
+    
+      
+        <div class="pb-5 d-flex flex-justify-center">
+          <div class="px-2">
+
+    <a href="https://github.com/jinmang2/jinmang2.github.io/tree/main/_notebooks/2022-03-02-computing-neural-network-gradients.ipynb" role="button" target="_blank">
+<img class="notebook-badge-image" src="/assets/badges/github.svg" alt="View On GitHub">
+    </a>
+</div>
+
+          <div class="px-2">
+    <a href="https://mybinder.org/v2/gh/jinmang2/jinmang2.github.io/main?filepath=_notebooks%2F2022-03-02-computing-neural-network-gradients.ipynb" target="_blank">
+        <img class="notebook-badge-image" src="/assets/badges/binder.svg" alt="Open In Binder"/>
+    </a>
+</div>
+
+          <div class="px-2">
+    <a href="https://colab.research.google.com/github/jinmang2/jinmang2.github.io/blob/main/_notebooks/2022-03-02-computing-neural-network-gradients.ipynb" target="_blank">
+        <img class="notebook-badge-image" src="/assets/badges/colab.svg" alt="Open In Colab"/>
+    </a>
+</div>
+
+          <div class="px-2">
+  <a href="https://deepnote.com/launch?url=https%3A%2F%2Fgithub.com%2Fjinmang2%2Fjinmang2.github.io%2Fblob%2Fmain%2F_notebooks%2F2022-03-02-computing-neural-network-gradients.ipynb" target="_blank">
+      <img class="notebook-badge-image" src="/assets/badges/deepnote.svg" alt="Launch in Deepnote"/>
+  </a>
+</div>
+
+        </div>
+      </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <ul id="toc" class="section-nav">
+<li class="toc-entry toc-h1"><a href="#Introduction">Introduction </a></li>
+<li class="toc-entry toc-h1"><a href="#Computing-Neural-Network-Gradients">Computing Neural Network Gradients </a>
+<ul>
+<li class="toc-entry toc-h2"><a href="#Vectorized-Gradients">Vectorized Gradients </a></li>
+<li class="toc-entry toc-h2"><a href="#Useful-Identites">Useful Identites </a>
+<ul>
+<li class="toc-entry toc-h3"><a href="#Matrix-times-column-vector-with-respect-to-the-column-vector">Matrix times column vector with respect to the column vector </a></li>
+<li class="toc-entry toc-h3"><a href="#Row-vector-times-matrix-with-respect-to-the-row-vector">Row vector times matrix with respect to the row vector </a></li>
+<li class="toc-entry toc-h3"><a href="#A-vector-with-itself">A vector with itself </a></li>
+<li class="toc-entry toc-h3"><a href="#An-elementwise-function-applied-a-vector">An elementwise function applied a vector </a></li>
+<li class="toc-entry toc-h3"><a href="#Matrix-times-column-vector-with-respect-to-the-matrix">Matrix times column vector with respect to the matrix </a></li>
+<li class="toc-entry toc-h3"><a href="#Row-vector-time-matrix-with-respect-to-the-matrix">Row vector time matrix with respect to the matrix </a></li>
+<li class="toc-entry toc-h3"><a href="#Cross-entropy-loss-with-respect-to-logits">Cross-entropy loss with respect to logits </a></li>
+</ul>
+</li>
+<li class="toc-entry toc-h2"><a href="#Gradient-Layout">Gradient Layout </a></li>
+<li class="toc-entry toc-h2"><a href="#Example:-1-Layer-Neural-Network">Example: 1-Layer Neural Network </a></li>
+</ul>
+</li>
+</ul><!--
+#################################################
+### THIS FILE WAS AUTOGENERATED! DO NOT EDIT! ###
+#################################################
+# file to edit: _notebooks/2022-03-02-computing-neural-network-gradients.ipynb
+-->
+
+<div class="container" id="notebook-container">
+        
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Introduction">
+<a class="anchor" href="#Introduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Introduction<a class="anchor-link" href="#Introduction"> </a>
+</h1>
+<p>본 포스팅에서는 Neural Network의 Gradients를 계산하는 방법을 알아보겠습니다. 해당 글은 cs224n lecture 5 material 자료를 정리한 글입니다.</p>
+<ul>
+<li><a href="https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1184/readings/gradient-notes.pdf">https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1184/readings/gradient-notes.pdf</a></li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="Computing-Neural-Network-Gradients">
+<a class="anchor" href="#Computing-Neural-Network-Gradients" aria-hidden="true"><span class="octicon octicon-link"></span></a>Computing Neural Network Gradients<a class="anchor-link" href="#Computing-Neural-Network-Gradients"> </a>
+</h1>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Vectorized-Gradients">
+<a class="anchor" href="#Vectorized-Gradients" aria-hidden="true"><span class="octicon octicon-link"></span></a>Vectorized Gradients<a class="anchor-link" href="#Vectorized-Gradients"> </a>
+</h2>
+<p>Neural Network의 gradient를 계산할 때는 single parameter(e.g., a single element in a weight matrix)과 관련하여 계산하는 것은 비효율적입니다. 실제로는 Matrix/Vector form으로 계산하지요(e.g., <code>torch.autograd</code>). Vector화된 gradients의 기본 building block은 <strong>Jacobian Matrix</strong> 입니다. 함수 $f:\mathbb{R}^n\rightarrow\mathbb{R}^m$을 길이가 $n$인 vector를 길이가 $m$인 vector로 매핑하는 함수라고 가정합시다. 즉, $f(x)=[f_1(x_1,\dots,x_n),f_2(x_1,\dots,x_n),\dots,f_m(x_1,\dots,x_n)]$. 이 때 Jacobian은 아래와 같은 $m\times n$ matrix입니다.</p>
+$$\cfrac{\partial f}{\partial x}=\begin{bmatrix}
+\frac{\partial f_1}{\partial x_1} &amp; \cdots &amp; \frac{\partial f_1}{\partial x_n}\\
+\vdots &amp; \ddots &amp; \vdots\\
+\frac{\partial f_m}{\partial x_1} &amp; \cdots &amp; \frac{\partial f_m}{\partial x_n}\\
+\end{bmatrix}$$<p>즉, $\begin{pmatrix}\frac{\partial f}{\partial x}\end{pmatrix}_{ij}=\frac{\partial f_i}{\partial x_j}$ (just a standard non-vector derivative). Jacobian matrix는 Jacobian들을 곱하여 vector-valued function에 chain rule을 적용할 수 있기 때문에 매우 편리합니다.</p>
+<p>단순화시켜서 생각해보겠습니다. 다음과 같이 함수 $f$와 $g$를 가지고 있다고 가정하겠습니다.</p>
+<ul>
+<li>$f(x)=[f_1(x),f_2(x)]$</li>
+<li>$g(y)=[g_1(y_1,y_2),g_2(y_1,y_2)]$</li>
+</ul>
+<p>$f$와 $g$를 합성하여 아래와 같이 쓸 수 있습니다.</p>
+<ul>
+<li>$g(x)=[g_1(f_1(x),f_2(x)),g_2(f_1(x),f_2(x))]$</li>
+</ul>
+<p>일반적인 chain rule을 사용하여 $g$의 derivative를 Jacobian으로 계산할 수 있습니다.</p>
+<p>
+$$\cfrac{\partial g}{\partial x}=\begin{bmatrix}\frac{\partial}{\partial x}g_1(f_1(x),f_2(x))\\\frac{\partial}{\partial x}g_2(f_1(x),f_2(x))\end{bmatrix}=\begin{bmatrix}\frac{\partial g_1}{\partial f_1}\frac{\partial f_1}{\partial x}+\frac{\partial g_1}{\partial f_2}\frac{\partial f_2}{\partial x}\\\frac{\partial g_2}{\partial f_1}\frac{\partial f_1}{\partial x}+\frac{\partial g_2}{\partial f_2}\frac{\partial f_2}{\partial x}\end{bmatrix}$$
+</p>
+<p>위 식은 아래의 두 Jacobian들의 곱으로 표현되지요.</p>
+<p>
+$$\cfrac{\partial g}{\partial x}=\cfrac{\partial g}{\partial f}\cfrac{\partial f}{\partial x}=\begin{bmatrix}\frac{\partial g_1}{\partial f_1} &amp; \frac{\partial g_1}{\partial f_2}\\\frac{\partial g_2}{\partial f_1}&amp;\frac{\partial g_2}{\partial f_2}\end{bmatrix}\begin{bmatrix}\frac{\partial f_1}{\partial x}\\\frac{\partial f_2}{\partial x}\end{bmatrix}$$
+</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Useful-Identites">
+<a class="anchor" href="#Useful-Identites" aria-hidden="true"><span class="octicon octicon-link"></span></a>Useful Identites<a class="anchor-link" href="#Useful-Identites"> </a>
+</h2>
+<p>신경망의 기본 연산에 관련하여 Jacobian을 몇몇 간단한 함수로 계산하는 방법에 대하여 다룹니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Matrix-times-column-vector-with-respect-to-the-column-vector">
+<a class="anchor" href="#Matrix-times-column-vector-with-respect-to-the-column-vector" aria-hidden="true"><span class="octicon octicon-link"></span></a>Matrix times column vector with respect to the column vector<a class="anchor-link" href="#Matrix-times-column-vector-with-respect-to-the-column-vector"> </a>
+</h3>
+<p>
+$$z=Wx,\;\text{what is }\frac{\partial z}{\partial x}\text{?}$$
+</p>
+<p>Matrix에 column vector를 곱하는 경우!</p>
+<p>가중치 행렬을 $W\in\mathbb{R}^{n\,\times\,m}$이라고 가정하겠습니다. 이 때 $z$를 m차원 vector를 입력으로 n차원 vector를 출력해주는 함수로 생각할 수 있고 Jacobian은 $n\times m$이 될 것입니다.</p>
+<p>
+$$z_i=\sum_{k=1}^{m}W_{ik}x_k$$
+</p>
+<p>Jacobian의 각 entry $\begin{pmatrix}\frac{\partial z}{\partial x}\end{pmatrix}_{ij}$는 아래와 같이 쓸 수 있습니다.</p>
+<p>
+$$\begin{pmatrix}\cfrac{\partial z}{\partial x}\end{pmatrix}_{ij}=\frac{\partial z_i}{\partial x_j}=\frac{\partial}{\partial x_j}\sum_{k=1}^{m}W_{ik}x_k=\sum_{k=1}^{m}W_{ik}\frac{\partial}{\partial x_j}x_k=W_{ij}$$
+</p>
+<p>
+$$\because\;\frac{\partial}{\partial x_j}x_k=1\;\text{if}\;k=j\;\text{and}\;0\;\text{if otherwise}$$
+</p>
+<p>Hence, $\boxed{\cfrac{\partial z}{\partial x}=W}$.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Row-vector-times-matrix-with-respect-to-the-row-vector">
+<a class="anchor" href="#Row-vector-times-matrix-with-respect-to-the-row-vector" aria-hidden="true"><span class="octicon octicon-link"></span></a>Row vector times matrix with respect to the row vector<a class="anchor-link" href="#Row-vector-times-matrix-with-respect-to-the-row-vector"> </a>
+</h3>
+<p>
+$$z=xW,\;\text{what is }\frac{\partial z}{\partial x}\text{?}$$
+</p>
+<p>row vector에 matrix를 곱하는 경우!</p>
+<p>가중치 행렬을 $W\in\mathbb{R}^{m\,\times\,n}$이라고 가정하겠습니다. 위의 경우와 유사하게 $z$를 아래처럼 쓸 수 있습니다.</p>
+<p>
+$$z_i=\sum_{k=1}^{m}x_k W_{ki}$$
+</p>
+<p>위와 유사하게 Jacobian의 각 entry $\begin{pmatrix}\frac{\partial z}{\partial x}\end{pmatrix}_{ij}$를 아래와 같이 쓸 수 있습니다.</p>
+<p>
+$$\begin{pmatrix}\cfrac{\partial z}{\partial x}\end{pmatrix}_{ij}=\frac{\partial z_i}{\partial x_j}=\frac{\partial}{\partial x_j}\sum_{k=1}^{m}x_kW_{ki}=\sum_{k=1}^{m}\frac{\partial}{\partial x_j}x_kW_{ki}=W_{ji}=W_{ij}^T$$
+</p>
+<p>
+$$\because\;\frac{\partial}{\partial x_j}x_k=1\;\text{if}\;k=j\;\text{and}\;0\;\text{if otherwise}$$
+</p>
+<p>Hence, $\boxed{\cfrac{\partial z}{\partial x}=W^T}$.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="A-vector-with-itself">
+<a class="anchor" href="#A-vector-with-itself" aria-hidden="true"><span class="octicon octicon-link"></span></a>A vector with itself<a class="anchor-link" href="#A-vector-with-itself"> </a>
+</h3>
+<p>
+$$z=x,\;\text{what is }\frac{\partial z}{\partial x}\text{?}$$
+</p>
+<p>사실 trivial합니다. Identity겠지요.</p>
+<p>우선 위의 식에서 $z_i=x_i$입니다. 즉,</p>
+$$\begin{pmatrix}\cfrac{\partial z}{\partial x}\end{pmatrix}_{ij}=\cfrac{\partial z_i}{\partial x_j}=\cfrac{\partial}{\partial x_j}x_i=
+\begin{cases}
+  1 &amp; \text{if}\ i=j \\
+  0 &amp; \text{otherwise}
+\end{cases}$$<p>즉, Jacobian $\frac{\partial z}{\partial x}$은 diagonal matrix이며 대각성분이 모두 1입니다.</p>
+<p>Hence, $\boxed{\cfrac{\partial z}{\partial x}=I}$.</p>
+<p>Chain rule을 적용할 때 Identity matrix는 항등원이기 때문에 이 term을 대부분 생략합니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="An-elementwise-function-applied-a-vector">
+<a class="anchor" href="#An-elementwise-function-applied-a-vector" aria-hidden="true"><span class="octicon octicon-link"></span></a>An elementwise function applied a vector<a class="anchor-link" href="#An-elementwise-function-applied-a-vector"> </a>
+</h3>
+<p>
+$$z=f(x),\;\text{what is }\frac{\partial z}{\partial x}\text{?}$$
+</p>
+<p>vector에 elementwise function을 적용하는 경우! (e.g., sigmoid, log, exp, softmax)</p>
+<p>$f$가 elementwise로 적용되기 때문에 $z_i=f(x_i)$입니다. 즉,</p>
+$$\begin{pmatrix}\cfrac{\partial z}{\partial x}\end{pmatrix}_{ij}=\cfrac{\partial z_i}{\partial x_j}=\cfrac{\partial}{\partial x_j}f(x_i)=
+\begin{cases}
+  f^\prime(x_i) &amp; \text{if}\ i=j \\
+  0 &amp; \text{otherwise}
+\end{cases}$$<p>위에서 볼 수 있듯 Jacobian $\frac{\partial z}{\partial x}$는 대각성분이 $f$의 derivative에 $x_i$를 먹인 값을 가지는 diagonal matrix입니다.</p>
+<p>Hence, $\boxed{\cfrac{\partial z}{\partial x}=\mathrm{diag}(f^\prime(x))}$.</p>
+<p>Diagonal matrix로 multiplication을 수행하는 것은 diagonal로 elementwise multiplication을 수행하는 것과 동일하기 때문에 chain rule을 적용할 때 이를 $\boxed{\circ f^\prime(x)}$로 적을 수 있습니다.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Matrix-times-column-vector-with-respect-to-the-matrix">
+<a class="anchor" href="#Matrix-times-column-vector-with-respect-to-the-matrix" aria-hidden="true"><span class="octicon octicon-link"></span></a>Matrix times column vector with respect to the matrix<a class="anchor-link" href="#Matrix-times-column-vector-with-respect-to-the-matrix"> </a>
+</h3>
+<p>
+$$z=Wx,\;\delta=\frac{\partial J}{\partial z}\;\text{what is }\frac{\partial J}{\partial W}=\frac{\partial J}{\partial z}\frac{\partial z}{\partial W}=\delta\frac{\partial z}{\partial W}\text{?}$$
+</p>
+<p>우선 $J$라는 loss function을 가지고 있다고 가정합시다.</p>
+<ul>
+<li>이 값은 scalar입니다.</li>
+</ul>
+<p>loss function $J$는 행렬 $W\in \mathbb{R}^{n\,\times\,m}$의 gradients를 계산합니다. $J$를 input $nm$차원의 vector를 받고 ($W$의 entries) single output ($J$)를 출력하는 $W$의 함수라고 생각할 수 있습니다. 이는 Jacobian $\frac{\partial J}{\partial W}$이 $1\,\times\,nm$ vector임을 의미합니다. 하지만 이는 실용적으로 효과적이지 않고 아래와 같이 $n\,\times\,m$ 차원의 행렬로 derivative를 더 nice하게 쓸 수 있습니다.</p>
+$$\cfrac{\partial J}{\partial W}=\begin{bmatrix}
+  \frac{\partial J}{\partial W_{11}} &amp; \cdots &amp; \frac{\partial J}{\partial W_{1m}} \\
+  \vdots &amp; \ddots &amp; \vdots \\
+  \frac{\partial J}{\partial W_{n1}} &amp; \cdots &amp; \frac{\partial J}{\partial W_{nm}} \\
+\end{bmatrix}$$<p>위 행렬은 $W$와 같은 shape을 가지기 때문에 gradient descent를 수행할 때 $W$에서 learning rate를 곱하고 빼면 됩니다.</p>
+<p>위 방식(gradient를 정렬하는 방법)은 $\frac{\partial z}{\partial W}$을 계산할 때 복잡해집니다. $J$는 scalar이기 때문에 matrix-form으로 jacobian을 쓸 수 있지만 $z$는 vector입니다. 이를 gradient arranging을 수행하면 $\frac{\partial z}{\partial W}$은 $n\,\times\,m\,\times\,n$ tensor가 될 것입니다. 운좋게도 이 문제를 single weight $W_{ij}$로 gradient를 계산하여 회피할 수 있습니다. $\frac{\partial z}{\partial W_{ij}}$은 vector기에 처리하기가 더 쉽습니다.</p>
+<p>
+$$z_k=\sum_{t=1}^{m}W_{kl}x_l$$
+</p>
+<p>
+$$\cfrac{\partial z_k}{\partial W_{ij}}=\sum_{l=1}^{m}x_l\cfrac{\partial}{\partial W_{ij}}W_{kl}$$
+</p>
+$$\cfrac{\partial}{\partial W_{ij}}W_{kl}=\begin{cases}
+  1 &amp; \text{if}\; i=k \,\text{and}\, j=l \\
+  0 &amp; \text{otherwise}
+\end{cases}$$<p>마지막 식에서 $k\neq i$이면 $\frac{\partial}{\partial W_{ij}}W_{kl}$은 0이 되고 그 합도 0, 최종적으로 gradient $\frac{\partial z_k}{\partial W_{ij}}$도 0이 됩니다. 반대로 summation의 유일한 nonzero element는 $l=j$일 때이며 해당 값은 $x_j$입니다.</p>
+<ul>
+<li>partial term이 1이 되고 나머지 term은 0이기 때문에!</li>
+</ul>
+<p>고로 위에서 $\frac{\partial z_k}{\partial W_{ij}}=x_j\;\text{if}\;k=i\;\text{and}\;0\;\text{otherwise}$임을 알 수 있고 아래처럼 쓸 수도 있습니다.</p>
+$$\cfrac{\partial z}{\partial W_{ij}}=\begin{bmatrix}
+  0 \\ \vdots \\ 0 \\ x_j \\ 0 \\ \vdots \\ 0
+\end{bmatrix} \leftarrow i\text{th element}$$<p>이제 $\frac{\partial J}{\partial W_{ij}}$를 계산해보면,</p>
+<p>
+$$\cfrac{\partial J}{\partial W_{ij}}=\cfrac{\partial J}{\partial z}\cfrac{\partial z}{\partial W_{ij}}=\delta \cfrac{\partial z}{\partial W_{ij}}=\sum_{k=1}^{m}\delta_k \cfrac{\partial z_k}{\partial W_{ij}}=\delta_i x_j$$
+</p>
+<ul>
+<li>The only nonzero term in the sum is $\delta_i \frac{\partial z_i}{\partial W_{ij}}$</li>
+</ul>
+<p>위로부터 아래의 결론을 도출할 수 있다.</p>
+<p>Hence, $\boxed{\cfrac{\partial J}{\partial W}=\delta x^T}$.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Row-vector-time-matrix-with-respect-to-the-matrix">
+<a class="anchor" href="#Row-vector-time-matrix-with-respect-to-the-matrix" aria-hidden="true"><span class="octicon octicon-link"></span></a>Row vector time matrix with respect to the matrix<a class="anchor-link" href="#Row-vector-time-matrix-with-respect-to-the-matrix"> </a>
+</h3>
+<p>
+$$z=xW,\;\delta=\frac{\partial J}{\partial z}\;\text{what is }\frac{\partial J}{\partial W}=\delta\frac{\partial z}{\partial W}\text{?}$$
+</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Cross-entropy-loss-with-respect-to-logits">
+<a class="anchor" href="#Cross-entropy-loss-with-respect-to-logits" aria-hidden="true"><span class="octicon octicon-link"></span></a>Cross-entropy loss with respect to logits<a class="anchor-link" href="#Cross-entropy-loss-with-respect-to-logits"> </a>
+</h3>
+<p>
+$$\hat{y}=\mathrm{softmax}(\theta),\;J=CE(y,\hat{y}),\;\text{what is }\frac{\partial J}{\partial \theta}\text{?}$$
+</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Gradient-Layout">
+<a class="anchor" href="#Gradient-Layout" aria-hidden="true"><span class="octicon octicon-link"></span></a>Gradient Layout<a class="anchor-link" href="#Gradient-Layout"> </a>
+</h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Example:-1-Layer-Neural-Network">
+<a class="anchor" href="#Example:-1-Layer-Neural-Network" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example: 1-Layer Neural Network<a class="anchor-link" href="#Example:-1-Layer-Neural-Network"> </a>
+</h2>
+</div>
+</div>
+</div>
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+
+
+<span class="k">def</span> <span class="nf">set_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">):</span>
+    <span class="sd">"""Seed fixer (random, numpy, torch)</span>
+<span class="sd">    Args:</span>
+<span class="sd">        seed (:obj:`int`): The seed to set.</span>
+<span class="sd">    """</span>
+    <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed_all</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>  <span class="c1"># if use multi-GPU</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">deterministic</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">cudnn</span><span class="o">.</span><span class="n">benchmark</span> <span class="o">=</span> <span class="kc">False</span>
+    
+    
+<span class="n">set_seed</span><span class="p">()</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">()</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">y</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># nn.Linear에서 Weight를 transpose로 저장 </span>
+<span class="n">torch</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">@</span> <span class="n">f</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>True</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[0.1242, 0.0392]])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[0.3367, 0.1288],
+        [0.3367, 0.1288],
+        [0.3367, 0.1288]])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="c1"># row vector case</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[0.3367, 0.3367, 0.3367],
+        [0.1288, 0.1288, 0.1288]], grad_fn=&lt;MmBackward&gt;)</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[0.3367, 0.1288],
+        [0.3367, 0.1288],
+        [0.3367, 0.1288]], grad_fn=&lt;PermuteBackward&gt;)</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">()</span>
+<span class="n">W</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">()</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">W</span> <span class="o">@</span> <span class="n">x</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[-0.1731, -0.8167,  0.1210, -0.7272,  1.9706],
+        [-0.1731, -0.8167,  0.1210, -0.7272,  1.9706],
+        [-0.1731, -0.8167,  0.1210, -0.7272,  1.9706]])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">@</span> <span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="c1"># column vector case</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>tensor([[-0.1731, -0.8167,  0.1210, -0.7272,  1.9706],
+        [-0.1731, -0.8167,  0.1210, -0.7272,  1.9706],
+        [-0.1731, -0.8167,  0.1210, -0.7272,  1.9706]], grad_fn=&lt;MmBackward&gt;)</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+</div>
+
+
+
+  </div><!-- from https://github.com/utterance/utterances -->
+<script src="https://utteranc.es/client.js"
+        repo="jinmang2/jinmang2.github.io"
+        issue-term="title"
+        label="blogpost-comment"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script><a class="u-url" href="/fundamental/cs231n/2022/03/02/computing-neural-network-gradients.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>Subscribe</span>
+          </a>
+        </p>
+      </div>
+      <div class="footer-col">
+        <p>An easy to use blogging platform with support for Jupyter Notebooks.</p>
+      </div>
+    </div>
+
+    <div class="social-links"><ul class="social-media-list"><li><a rel="me" href="https://github.com/jinmang2" target="_blank" title="jinmang2"><svg class="svg-icon grey"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg></a></li></ul>
+</div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
